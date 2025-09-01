@@ -156,6 +156,12 @@ Badges are hosted on the `image-data` branch.
 
 ---
 
+## Should I star this repository?
+
+You don’t have to, but giving it a star would mean a lot. It helps more people discover BulletDroid. Your support helps us grow an open and accessible community. Thank you!
+
+---
+
 ## Contributing
 
 We welcome issues, feature requests, and pull requests! Please read the [contribution guidelines](CONTRIBUTING.md) before you begin as they cover the development workflow, coding conventions, commit / branch naming, and the review process.
