@@ -123,7 +123,7 @@ jobs:
         if: always()
         run: |
           mkdir -p ./output
-          curl -o ./output/stars-badge.svg "https://img.shields.io/github/stars/DannyLuna17/BulletDroid2-Dev?style=flat-square&logo=github"
+          curl -o ./output/stars-badge.svg "https://img.shields.io/github/stars/DannyLuna17/BulletDroid2?style=flat-square&logo=github"
 
       - name: Update badges to image-data branch
         if: always()

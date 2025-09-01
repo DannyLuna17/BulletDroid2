@@ -10,7 +10,7 @@ We're excited that you're interested in contributing to BulletDroid. To make sur
 
 ## Code of Conduct
 
-Help us keep BulletDroid open and inclusive. Please read and follow our [Code of Conduct](https://github.com/DannyLuna17/BulletDroid2-Dev/blob/master/CODE_OF_CONDUCT.md).
+Help us keep BulletDroid open and inclusive. Please read and follow our [Code of Conduct](https://github.com/DannyLuna17/BulletDroid2/blob/main/CODE_OF_CONDUCT.md).
 
 ## Submit a Pull Request
 

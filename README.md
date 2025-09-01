@@ -5,15 +5,15 @@
 </p>
 
 <p align="center">
-  <img src="https://github.com/DannyLuna17/BulletDroid2-Dev/raw/image-data/ci-badge.svg" alt="CI Status" height="22" />
-  <a href="LICENSE"><img src="https://github.com/DannyLuna17/BulletDroid2-Dev/raw/image-data/license-badge.svg" alt="License: MIT" height="22" /></a>
-  <img src="https://github.com/DannyLuna17/BulletDroid2-Dev/raw/image-data/locBadge.svg" alt="LOC badge" height="22" />
-  <a href="https://github.com/DannyLuna17/BulletDroid2-Dev/stargazers"><img src="https://github.com/DannyLuna17/BulletDroid2-Dev/raw/image-data/stars-badge.svg" alt="GitHub Stars" height="22" /></a>
+  <img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/ci-badge.svg" alt="CI Status" height="22" />
+  <a href="LICENSE"><img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/license-badge.svg" alt="License: MIT" height="22" /></a>
+  <img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/locBadge.svg" alt="LOC badge" height="22" />
+  <a href="https://github.com/DannyLuna17/BulletDroid2/stargazers"><img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/stars-badge.svg" alt="GitHub Stars" height="22" /></a>
   
 </p>
 <p align="center">
-  <a href="https://t.me/BulletDroidChannel"><img src="https://github.com/DannyLuna17/BulletDroid2-Dev/raw/image-data/telegram-channel-badge.svg" alt="Telegram Channel" height="22" /></a>
-  <a href="https://t.me/BulletDroidChat"><img src="https://github.com/DannyLuna17/BulletDroid2-Dev/raw/image-data/telegram-chat-badge.svg" alt="Telegram Chat" height="22" /></a>
+  <a href="https://t.me/BulletDroidChannel"><img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/telegram-channel-badge.svg" alt="Telegram Channel" height="22" /></a>
+  <a href="https://t.me/BulletDroidChat"><img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/telegram-chat-badge.svg" alt="Telegram Chat" height="22" /></a>
   <img src="https://upload.wikimedia.org/wikipedia/commons/2/21/Flag_of_Colombia.svg" alt="Colombia Flag" height="22" />
 </p>
 
@@ -33,7 +33,7 @@ Typical use cases span large‑scale data collection and extraction, robust resp
 
 ## User Installation
 
-[Download BulletDroid (Android APK and iOS IPA)](https://github.com/DannyLuna17/BulletDroid2-Dev/releases)
+[Download BulletDroid (Android APK and iOS IPA)](https://github.com/DannyLuna17/BulletDroid2/releases)
 
 
 ## Usage
@@ -98,7 +98,7 @@ BulletDroid/
 
 ```bash
 # Windows
-git clone https://github.com/DannyLuna17/BulletDroid2-Dev.git
+git clone https://github.com/DannyLuna17/BulletDroid2.git
 cd BulletDroid
 
 # App deps
