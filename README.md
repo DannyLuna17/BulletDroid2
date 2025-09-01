@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/ci-badge.svg" alt="CI Status" height="22" />
   <a href="LICENSE"><img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/license-badge.svg" alt="License: MIT" height="22" /></a>
-  <img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/locBadge.svg" alt="LOC badge" height="22" />
+  <!-- <img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/locBadge.svg" alt="LOC badge" height="22" /> -->
   <a href="https://github.com/DannyLuna17/BulletDroid2/stargazers"><img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/stars-badge.svg" alt="GitHub Stars" height="22" /></a>
   
 </p>
