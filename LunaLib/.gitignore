@@ -1,0 +1,7 @@
+.dart_tool/
+pubspec.lock
+.env
+.VSCodeCounter/
+build/
+example/configs/
+configs/

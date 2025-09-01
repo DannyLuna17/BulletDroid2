@@ -1,0 +1,143 @@
+name: "Build & Release"
+
+env:
+  RUNNER_OS: macos
+
+on:
+  workflow_dispatch:
+        
+jobs:  
+  build:      
+    name: Build & Release 
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Launch the local action
+        uses: shadowmoose/GHA-LoC-Badge@1.0.0
+        id: badge
+        with:
+          debug: true
+          directory: ./
+          badge: ./output/locBadge.svg
+          patterns: '*.dart'
+          ignore: 'README|build|output'
+      
+      - name: Print the output
+        run: |
+          echo "Scanned: ${{ steps.badge.outputs.counted_files }}";
+          echo "Line Count: ${{ steps.badge.outputs.total_lines }}";
+
+      - name: Set Up Java
+        uses: actions/setup-java@v3.12.0
+        with:
+          distribution: 'oracle'
+          java-version: '17'
+
+      - name: Fix flutter SDK folder permission
+        run: git config --global --add safe.directory /tmp/flutter/
+
+      - name: Set Up Flutter
+        uses: subosito/flutter-action@v2
+        id: flutter-action
+        with:
+          architecture: x64
+      - run: git config --global --add safe.directory /opt/hostedtoolcache/flutter/${{ steps.flutter-action.outputs.CHANNEL }}-${{ steps.flutter-action.outputs.VERSION }}-${{ steps.flutter-action.outputs.ARCHITECTURE }}
+
+      - name: Install Dependencies
+        run: |
+          cd bullet_droid
+          flutter pub get
+      
+      - name: Build APK
+        run: |
+          cd bullet_droid
+          flutter build apk --release
+
+      - name: Build IPA
+        run: |
+          cd bullet_droid
+          flutter build ipa --no-codesign  
+                  
+      - name: Compress Archives and IPAs
+        run: |
+          cd bullet_droid/build
+          tar -czf ios_build.tar.gz ios
+      
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Releases
+          path: |
+            bullet_droid/build/app/outputs/flutter-apk/app-release.apk
+            bullet_droid/build/ios_build.tar.gz
+      
+      - name: Extract version from pubspec.yaml
+        id: extract_version
+        run: |
+          version=$(grep '^version: ' bullet_droid/pubspec.yaml | cut -d ' ' -f 2 | tr -d '\r')
+          echo "VERSION=$version" >> $GITHUB_ENV
+      
+      - name: Check if Tag Exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ github.run_number }}" >/dev/null 2>&1; then
+            echo "TAG_EXISTS=true" >> $GITHUB_ENV
+          else
+            echo "TAG_EXISTS=false" >> $GITHUB_ENV
+          fi
+      
+      - name: Modify Tag
+        if: env.TAG_EXISTS == 'true'
+        id: modify_tag
+        run: |
+          new_version="${{ github.run_number }}-build-${{ github.run_number }}"
+          echo "VERSION=$new_version" >> $GITHUB_ENV
+
+      - name: Generate CI Status Badge
+        if: always()
+        run: |
+          mkdir -p ./output
+          if [ "${{ job.status }}" == "success" ]; then
+            curl -o ./output/ci-badge.svg "https://img.shields.io/badge/CI-passing-brightgreen?style=flat-square&logo=github"
+          else
+            curl -o ./output/ci-badge.svg "https://img.shields.io/badge/CI-failing-red?style=flat-square&logo=github"
+          fi
+
+      - name: Generate License Badge
+        if: always()
+        run: |
+          mkdir -p ./output
+          curl -o ./output/license-badge.svg "https://img.shields.io/badge/License-MIT-blue?style=flat-square"
+      
+      - name: Generate Telegram Badges
+        if: always()
+        run: |
+          mkdir -p ./output
+          curl -o ./output/telegram-channel-badge.svg "https://img.shields.io/badge/Telegram-Channel-2CA5E0?style=flat-square&logo=telegram&logoColor=white"
+          curl -o ./output/telegram-chat-badge.svg "https://img.shields.io/badge/Telegram-Chat-2CA5E0?style=flat-square&logo=telegram&logoColor=white"
+
+      - name: Generate Stars Badge
+        if: always()
+        run: |
+          mkdir -p ./output
+          curl -o ./output/stars-badge.svg "https://img.shields.io/github/stars/DannyLuna17/BulletDroid2-Dev?style=flat-square&logo=github"
+
+      - name: Update badges to image-data branch
+        if: always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          publish_dir: ./output
+          publish_branch: image-data
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
+        
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "bullet_droid/build/app/outputs/flutter-apk/app-release.apk,bullet_droid/build/ios_build.tar.gz"
+          tag: v${{ env.VERSION }}
+          token: ${{ secrets.TOKEN }}

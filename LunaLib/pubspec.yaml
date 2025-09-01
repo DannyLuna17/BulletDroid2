@@ -1,0 +1,24 @@
+name: bullet_droid2
+description: Mobile LoliCode config runner for Dart/Flutter
+version: 1.0.0
+homepage: https://github.com/yourusername/bullet_droid2
+repository: https://github.com/yourusername/bullet_droid2
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  http: ^1.1.0
+  http_parser: ^4.0.2
+  crypto: ^3.0.3
+  encrypt: ^5.0.3
+  html: ^0.15.4
+  path: ^1.8.3
+  pointycastle: ^3.7.3
+  math_expressions: ^2.4.0
+  xml: ^6.3.0
+  dio: ^5.4.0
+
+dev_dependencies:
+  test: ^1.24.0
+  lints: ^4.0.0

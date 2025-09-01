@@ -1,0 +1,163 @@
+name: bullet_droid
+description: "An open source mobile prot of OpenBullet with Dart and Flutter"
+publish_to: "none"
+
+version: 2.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+
+  # Navigation
+  go_router: ^14.2.0
+
+  # Storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # File Operations
+  file_picker: ^8.0.0+1
+  path_provider: ^2.1.3
+
+  # Utilities
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.9.0
+  intl: ^0.18.1
+  uuid: ^4.4.2
+  url_launcher: ^6.3.0
+
+  # Local dependency
+  bullet_droid2:
+    path: ../LunaLib
+
+  # Background foreground service and notifications
+  flutter_foreground_task: ^9.1.0
+  flutter_local_notifications: ^19.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+  build_runner: ^2.4.11
+  freezed: ^2.5.2
+  json_serializable: ^6.8.0
+  riverpod_generator: ^2.4.0
+  hive_generator: ^2.0.1
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
+
+  fonts:
+    - family: Geist
+      fonts:
+        - asset: assets/fonts/geist/Geist-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/geist/Geist-ThinItalic.ttf
+          weight: 100
+          style: italic
+        - asset: assets/fonts/geist/Geist-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/geist/Geist-ExtraLightItalic.ttf
+          weight: 200
+          style: italic
+        - asset: assets/fonts/geist/Geist-Light.ttf
+          weight: 300
+        - asset: assets/fonts/geist/Geist-LightItalic.ttf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/geist/Geist-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/geist/Geist-RegularItalic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/geist/Geist-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/geist/Geist-MediumItalic.ttf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/geist/Geist-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/geist/Geist-SemiBoldItalic.ttf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/geist/Geist-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/geist/Geist-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/geist/Geist-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/geist/Geist-ExtraBoldItalic.ttf
+          weight: 800
+          style: italic
+        - asset: assets/fonts/geist/Geist-Black.ttf
+          weight: 900
+        - asset: assets/fonts/geist/Geist-BlackItalic.ttf
+          weight: 900
+          style: italic
+    - family: GeistMono
+      fonts:
+        - asset: assets/fonts/geistMono/GeistMono-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/geistMono/GeistMono-ThinItalic.ttf
+          weight: 100
+          style: italic
+        - asset: assets/fonts/geistMono/GeistMono-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/geistMono/GeistMono-ExtraLightItalic.ttf
+          weight: 200
+          style: italic
+        - asset: assets/fonts/geistMono/GeistMono-Light.ttf
+          weight: 300
+        - asset: assets/fonts/geistMono/GeistMono-LightItalic.ttf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/geistMono/GeistMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/geistMono/GeistMono-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/geistMono/GeistMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/geistMono/GeistMono-MediumItalic.ttf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/geistMono/GeistMono-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/geistMono/GeistMono-SemiBoldItalic.ttf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/geistMono/GeistMono-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/geistMono/GeistMono-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/geistMono/GeistMono-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/geistMono/GeistMono-ExtraBoldItalic.ttf
+          weight: 800
+          style: italic
+        - asset: assets/fonts/geistMono/GeistMono-Black.ttf
+          weight: 900
+        - asset: assets/fonts/geistMono/GeistMono-BlackItalic.ttf
+          weight: 900
+          style: italic
+
+# Flutter Launcher Icons Configuration
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/app_icon.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/icons/app_icon.png"
+  remove_alpha_ios: true
