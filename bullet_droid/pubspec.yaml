@@ -1,5 +1,5 @@
 name: bullet_droid
-description: "An open source mobile prot of OpenBullet with Dart and Flutter"
+description: "An open source mobile port of OpenBullet with Dart and Flutter"
 publish_to: "none"
 
 version: 2.0.0+1

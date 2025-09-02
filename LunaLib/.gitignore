@@ -3,5 +3,5 @@ pubspec.lock
 .env
 .VSCodeCounter/
 build/
-example/configs/
-configs/
+example/configs/*
+!example/configs/sample_config.loli
