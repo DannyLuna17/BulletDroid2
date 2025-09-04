@@ -9,12 +9,13 @@
   <a href="LICENSE"><img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/license-badge.svg" alt="License: MIT" height="22" /></a>
   <!-- <img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/locBadge.svg" alt="LOC badge" height="22" /> -->
   <!-- <a href="https://github.com/DannyLuna17/BulletDroid2/stargazers"><img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/stars-badge.svg" alt="GitHub Stars" height="22" /></a> -->
-  
-</p>
-<p align="center">
   <a href="https://t.me/BulletDroidChannel"><img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/telegram-channel-badge.svg" alt="Telegram Channel" height="22" /></a>
   <a href="https://t.me/BulletDroidChat"><img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/telegram-chat-badge.svg" alt="Telegram Chat" height="22" /></a>
   <img src="https://upload.wikimedia.org/wikipedia/commons/2/21/Flag_of_Colombia.svg" alt="Colombia Flag" height="22" />
+  
+</p>
+<p align="center">
+  
 </p>
 
 # BulletDroid 2
