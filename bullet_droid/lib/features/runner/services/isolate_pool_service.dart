@@ -504,9 +504,12 @@ class IsolateWorker {
                 replyPort.send({'type': 'BOT_RESULT', 'data': botUpdateData});
               },
               onProxyUpdate: (proxyUpdate) {
+                // Ensure proper JSON serialization across isolate boundary
+                final jsonString = jsonEncode(proxyUpdate.toJson());
+                final jsonData = jsonDecode(jsonString);
                 replyPort.send({
                   'type': 'PROXY_UPDATE',
-                  'data': proxyUpdate.toJson(),
+                  'data': jsonData,
                 });
               },
             );
@@ -539,7 +542,11 @@ class JobRunner {
   bool _cancelRequested = false;
   Timer? _cpmTimer;
   Timer? _cleanupTimer;
+  Timer? _proxyUpdateTimer;
   DateTime? _lastZeroCpmTime;
+
+  // Track pending proxy updates
+  final Map<String, ProxyStatus> _pendingProxyUpdates = {};
 
   // Shared counters for tracking real progress
   int _realProcessed = 0;
@@ -578,6 +585,15 @@ class JobRunner {
       default:
         _realFails.add(validResult);
     }
+  }
+
+  void _updateProxyStatus(String proxy, ProxyState state) {
+    _pendingProxyUpdates[proxy] = ProxyStatus(
+      proxy: proxy,
+      state: state,
+      usageCount: 1,
+      lastUsed: DateTime.now(),
+    );
   }
 
   Future<void> run() async {
@@ -678,6 +694,27 @@ class JobRunner {
         CPMCalculator.cleanupOldResults(_realFails);
         CPMCalculator.cleanupOldResults(_realCustoms);
         CPMCalculator.cleanupOldResults(_realToChecks);
+      });
+
+      // Proxy update timer (every 1 second)
+      _proxyUpdateTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+        if (_shouldStop) {
+          timer.cancel();
+          return;
+        }
+
+        if (_pendingProxyUpdates.isNotEmpty) {
+          final updates = _pendingProxyUpdates.values.toList();
+          _pendingProxyUpdates.clear();
+
+          onProxyUpdate(
+            ProxyUpdate(
+              jobId: jobId,
+              runnerId: runnerId,
+              proxies: updates,
+            ),
+          );
+        }
       });
 
       // If single thread, run sequentially for simplicity
@@ -836,10 +873,12 @@ class JobRunner {
 
       _cpmTimer?.cancel();
       _cleanupTimer?.cancel();
+      _proxyUpdateTimer?.cancel();
 
     } catch (e) {
       _cpmTimer?.cancel();
       _cleanupTimer?.cancel();
+      _proxyUpdateTimer?.cancel();
 
       onProgress(
         JobProgress(
@@ -866,6 +905,7 @@ class JobRunner {
     _cancelRequested = true;
     _cpmTimer?.cancel();
     _cleanupTimer?.cancel();
+    _proxyUpdateTimer?.cancel();
   }
 
   ValidDataResult _createValidDataResult(BotExecutionResult botResult) {
@@ -971,6 +1011,40 @@ class JobRunner {
 
       // Map LunaLib status to BulletDroid status
       BotStatus bulletStatus;
+
+      // Track proxy status if used
+      if (usedProxyString != null) {
+        ProxyState? proxyState;
+
+        switch (result.status) {
+          case lunalib.BotStatus.SUCCESS:
+            proxyState = ProxyState.good;
+            break;
+          case lunalib.BotStatus.CUSTOM:
+            proxyState = ProxyState.good;
+            break;
+          case lunalib.BotStatus.FAIL:
+            // If failed, we consider it as good because it means the proxy is working but the data is not valid
+            proxyState = ProxyState.good;
+            break;
+          case lunalib.BotStatus.BAN:
+            proxyState = ProxyState.banned;
+            break;
+          case lunalib.BotStatus.RETRY:
+            proxyState = ProxyState.bad;
+            break;
+          case lunalib.BotStatus.TOCHECK:
+            proxyState = ProxyState.good;
+            break;
+          case lunalib.BotStatus.NONE:
+          case lunalib.BotStatus.UNKNOWN:
+          default:
+            proxyState = ProxyState.untested;
+        }
+
+        _updateProxyStatus(usedProxyString, proxyState);
+      }
+
       switch (result.status) {
         case lunalib.BotStatus.SUCCESS:
           bulletStatus = BotStatus.SUCCESS;

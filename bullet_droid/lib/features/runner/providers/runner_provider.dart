@@ -120,6 +120,9 @@ class MultiRunnerNotifier extends StateNotifier<Map<String, RunnerInstance>> {
 
   final Map<String, Set<String>> _processedHits = {};
 
+  // Track detailed proxy states for each runner
+  final Map<String, Map<String, ProxyState>> _runnerProxyStates = {};
+
   final Set<String> _completedJobs = {};
 
   MultiRunnerNotifier(
@@ -300,29 +303,42 @@ class MultiRunnerNotifier extends StateNotifier<Map<String, RunnerInstance>> {
           return;
         }
 
-        final Map<String, int> newProxyStats = {
-          'untested': 0,
-          'good': 0,
-          'bad': 0,
-          'banned': 0,
-        };
-
+        // Update tracked proxy states
+        final runnerProxyStates = _runnerProxyStates[runnerId] ?? {};
         for (final proxy in proxyUpdate.proxies) {
-          switch (proxy.state) {
+          runnerProxyStates[proxy.proxy] = proxy.state;
+        }
+        _runnerProxyStates[runnerId] = runnerProxyStates;
+
+        // Calculate stats from full state map
+        int untested = 0;
+        int good = 0;
+        int bad = 0;
+        int banned = 0;
+
+        for (final state in runnerProxyStates.values) {
+          switch (state) {
             case ProxyState.untested:
-              newProxyStats['untested'] = (newProxyStats['untested'] ?? 0) + 1;
+              untested++;
               break;
             case ProxyState.good:
-              newProxyStats['good'] = (newProxyStats['good'] ?? 0) + 1;
+              good++;
               break;
             case ProxyState.bad:
-              newProxyStats['bad'] = (newProxyStats['bad'] ?? 0) + 1;
+              bad++;
               break;
             case ProxyState.banned:
-              newProxyStats['banned'] = (newProxyStats['banned'] ?? 0) + 1;
+              banned++;
               break;
           }
         }
+
+        final Map<String, int> newProxyStats = {
+          'untested': untested,
+          'good': good,
+          'bad': bad,
+          'banned': banned,
+        };
 
         final updatedRunner = currentRunner.updateProgress(
           proxyStats: newProxyStats,
@@ -584,6 +600,15 @@ class MultiRunnerNotifier extends StateNotifier<Map<String, RunnerInstance>> {
 
     // Clear previous job tracking data for clean slate
     _clearPreviousJobData(runnerId);
+
+    // Initialize proxy tracking if proxies are used
+    if (params.useProxies) {
+      _runnerProxyStates[runnerId] = {
+        for (var p in params.proxies) p: ProxyState.untested,
+      };
+    } else {
+      _runnerProxyStates.remove(runnerId);
+    }
 
     try {
       final jobId = await _isolatePool.startJob(params, runnerId: runnerId);
@@ -1008,6 +1033,7 @@ class MultiRunnerNotifier extends StateNotifier<Map<String, RunnerInstance>> {
     state = newState;
 
     _jobRecoveryService.removeRunner(runnerId);
+    _runnerProxyStates.remove(runnerId);
   }
 
   /// Update dashboard with live progress
@@ -1149,6 +1175,7 @@ class MultiRunnerNotifier extends StateNotifier<Map<String, RunnerInstance>> {
   void dispose() {
     _processedHits.clear();
     _completedJobs.clear();
+    _runnerProxyStates.clear();
     super.dispose();
   }
 }
