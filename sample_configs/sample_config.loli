@@ -1,0 +1,46 @@
+[SETTINGS]
+{
+  "Name": "Sample Test Config",
+  "SuggestedBots": 10,
+  "MaxCPM": 0,
+  "LastModified": "2025-01-25T10:00:00.000Z",
+  "AdditionalInfo": "This is a sample config for testing file loading",
+  "RequiredPlugins": [],
+  "Author": "LunaLib",
+  "Version": "1.0.0",
+  "SaveEmptyCaptures": false,
+  "ContinueOnCustom": false,
+  "SaveHitsToTextFile": true,
+  "IgnoreResponseErrors": false,
+  "MaxRedirects": 10,
+  "NeedsProxies": false,
+  "OnlySocks": false,
+  "OnlySsl": false,
+  "MaxProxyUses": 0,
+  "BanProxyAfterGoodStatus": false,
+  "BanLoopEvasionOverride": -1,
+  "EncodeData": false,
+  "AllowedWordlist1": "Default",
+  "AllowedWordlist2": "",
+  "DataRules": [],
+  "CustomInputs": [],
+  "ForceHeadless": false,
+  "AlwaysOpen": false,
+  "AlwaysQuit": false,
+  "QuitOnBanRetry": false,
+  "DisableNotifications": false,
+  "CustomUserAgent": "",
+  "RandomUA": false,
+  "CustomCMDArgs": ""
+}
+
+[SCRIPT]
+REQUEST GET "https://httpbin.org/get"
+  HEADER "User-Agent: LunaLib/1.0"
+  HEADER "Accept: application/json"
+
+PARSE "<SOURCE>" JSON "origin" -> VAR "ip"
+
+KEYCHECK
+  KEYCHAIN Success OR
+    KEY "<ip>" Contains "." 
