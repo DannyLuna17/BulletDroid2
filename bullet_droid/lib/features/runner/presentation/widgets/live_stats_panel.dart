@@ -132,7 +132,7 @@ class DataStatsRow extends StatelessWidget {
             label: 'ToCheck',
           ),
           StatusPill(
-            color: GeistColors.blue,
+            color: GeistColors.lightTextSecondary,
             count: stats['retry'] ?? 0,
             label: 'Retry',
           ),

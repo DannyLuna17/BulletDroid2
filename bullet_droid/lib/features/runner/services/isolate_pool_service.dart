@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:isolate';
+import 'package:bullet_droid/core/utils/logging.dart';
 import 'package:bullet_droid2/bullet_droid.dart' as lunalib;
 
 import 'package:bullet_droid/features/runner/models/job_params.dart';
@@ -548,6 +549,13 @@ class JobRunner {
   // Track pending proxy updates
   final Map<String, ProxyStatus> _pendingProxyUpdates = {};
 
+  // Proxy pool management
+  List<String> _activeProxies = [];
+  final Set<String> _badProxies = {};
+  final Set<String> _testedProxies = {};
+  int _proxyRoundRobinIndex = 0;
+  int _uniqueProxyCount = 0;
+
   // Shared counters for tracking real progress
   int _realProcessed = 0;
   final List<ValidDataResult> _realHits = [];
@@ -567,7 +575,11 @@ class JobRunner {
   // Update real counters when bot results are processed
   void _updateRealCounters(BotExecutionResult result) {
     final validResult = _createValidDataResult(result);
-    _realProcessed++;
+    
+    // Only increment processed count if it s not a retry (since retries are re-queued)
+    if (result.status != BotStatus.RETRY) {
+      _realProcessed++;
+    }
 
     switch (result.status) {
       case BotStatus.SUCCESS:
@@ -596,6 +608,46 @@ class JobRunner {
     );
   }
 
+  String _getNextProxy() {
+    if (_activeProxies.isEmpty) {
+      if (_badProxies.isEmpty) return ''; 
+      // If we somehow emptied active proxies but haven't triggered reset
+      // Fallback: refill from bad proxies just to keep going
+      // Normally _markProxyTested will handle reset so this should not happen.
+      _activeProxies.addAll(_badProxies);
+      _badProxies.clear();
+    }
+
+    final proxy = _activeProxies[_proxyRoundRobinIndex % _activeProxies.length];
+    _proxyRoundRobinIndex++;
+    return proxy;
+  }
+
+  void _handleProxyFailure(String proxy) {
+    if (_activeProxies.contains(proxy)) {
+      _activeProxies.remove(proxy);
+      _badProxies.add(proxy);
+    }
+  }
+
+  void _markProxyTested(String proxy) {
+    _testedProxies.add(proxy);
+    if (_testedProxies.length >= _uniqueProxyCount && _uniqueProxyCount > 0) {
+      Log.i('All $_uniqueProxyCount proxies tested. Resetting pool and counters.');
+      
+      // Restore full list
+      _activeProxies = List.from(params.proxies);
+      _badProxies.clear();
+      _testedProxies.clear();
+      _proxyRoundRobinIndex = 0;
+
+      // Reset counters in UI
+      for (final p in _activeProxies) {
+        _updateProxyStatus(p, ProxyState.untested);
+      }
+    }
+  }
+
   Future<void> run() async {
     final int totalProcessableLines =
         params.startIndex >= params.dataLines.length
@@ -603,6 +655,12 @@ class JobRunner {
         : (params.dataLines.length - params.startIndex);
 
     try {
+      // Initialize active proxies
+      if (params.useProxies) {
+        _activeProxies = List.from(params.proxies);
+        _uniqueProxyCount = params.proxies.toSet().length;
+      }
+
       // Initial progress
       onProgress(
         JobProgress(
@@ -619,7 +677,6 @@ class JobRunner {
       final config = await lunalib.ConfigLoader.loadFromFile(params.configPath);
 
       // Thread-safe result collections
-      int processed = 0;
       final List<ValidDataResult> hits = [];
       final List<ValidDataResult> fails = [];
       final List<ValidDataResult> customs = [];
@@ -639,7 +696,8 @@ class JobRunner {
           hits: _realHits,
           fails: _realFails,
           customs: _realCustoms,
-          toChecks: _realToChecks,
+          // Exclude retries from CPM calculation
+          toChecks: _realToChecks.where((r) => r.status != BotStatus.RETRY).toList(),
         );
 
         // Track when CPM becomes 0 to stop timer after inactivity
@@ -720,15 +778,23 @@ class JobRunner {
       // If single thread, run sequentially for simplicity
       if (params.threads <= 1) {
         const workerBotId = 1;
-
+        
+        // Queue to append retries to the end
+        final processingQueue = <int>[];
         for (int i = params.startIndex; i < params.dataLines.length; i++) {
+          processingQueue.add(i);
+        }
+
+        int queueIndex = 0;
+        while (queueIndex < processingQueue.length) {
           if (_shouldStop) {
             break;
           }
 
-          final dataLine = params.dataLines[i];
-          final int dataLineIndex =
-              i;
+          final dataLineIndex = processingQueue[queueIndex];
+          queueIndex++; 
+
+          final dataLine = params.dataLines[dataLineIndex];
 
           try {
             final result = await _processDataLine(
@@ -738,11 +804,15 @@ class JobRunner {
               dataLineIndex,
             );
 
+            if (result.status == BotStatus.RETRY) {
+              // Retry: add back to queue and don't update processed/counters
+              processingQueue.add(dataLineIndex);
+            }
+
             final validResult = _createValidDataResult(result);
 
             _updateRealCounters(result);
 
-            processed++;
             switch (result.status) {
               case BotStatus.SUCCESS:
                 hits.add(validResult);
@@ -750,9 +820,8 @@ class JobRunner {
               case BotStatus.CUSTOM:
                 customs.add(validResult);
                 break;
+              // RETRY already handled previously
               case BotStatus.RETRY:
-                toChecks.add(validResult);
-                break;
               case BotStatus.TOCHECK:
                 toChecks.add(validResult);
                 break;
@@ -762,7 +831,6 @@ class JobRunner {
 
             onBotResult(result);
           } catch (e) {
-            processed++;
 
             // Create a failed result
             final failedResult = BotExecutionResult(
@@ -814,7 +882,6 @@ class JobRunner {
               _updateRealCounters(result);
 
               // Update old counters atomically
-              processed++;
               switch (result.status) {
                 case BotStatus.SUCCESS:
                   hits.add(validResult);
@@ -862,7 +929,7 @@ class JobRunner {
           startTime: startTime,
           endTime: DateTime.now(),
           totalLines: totalProcessableLines,
-          processedLines: processed,
+          processedLines: _realProcessed,
           hits: hits,
           fails: fails,
           customs: customs,
@@ -943,16 +1010,20 @@ class JobRunner {
 
       // Configure proxy if available and enabled
       if (params.useProxies && params.proxies.isNotEmpty) {
-        final proxyString =
-            params.proxies[(dataLineIndex) % params.proxies.length];
+        // Use dynamic proxy selection from pool
+        final proxyString = _getNextProxy();
 
-        final proxy = _parseProxyString(proxyString);
-        if (proxy != null) {
-          botData.proxy = proxy;
-          botData.useProxy = true;
-          usedProxyString = proxyString;
+        if (proxyString.isNotEmpty) {
+           final proxy = _parseProxyString(proxyString);
+           if (proxy != null) {
+             botData.proxy = proxy;
+             botData.useProxy = true;
+             usedProxyString = proxyString;
+           } else {
+             usedProxyString = null;
+           }
         } else {
-          usedProxyString = null;
+           usedProxyString = null;
         }
       } else {
         if (!params.useProxies) {
@@ -1031,18 +1102,21 @@ class JobRunner {
             proxyState = ProxyState.banned;
             break;
           case lunalib.BotStatus.RETRY:
+          case lunalib.BotStatus.ERROR:
+            // Treat ERROR (exceptions) as bad proxy if proxy was used
             proxyState = ProxyState.bad;
+            _handleProxyFailure(usedProxyString);
             break;
           case lunalib.BotStatus.TOCHECK:
             proxyState = ProxyState.good;
             break;
           case lunalib.BotStatus.NONE:
           case lunalib.BotStatus.UNKNOWN:
-          default:
             proxyState = ProxyState.untested;
         }
 
         _updateProxyStatus(usedProxyString, proxyState);
+        _markProxyTested(usedProxyString);
       }
 
       switch (result.status) {
@@ -1063,6 +1137,9 @@ class JobRunner {
           break;
         case lunalib.BotStatus.FAIL:
           bulletStatus = BotStatus.FAILED;
+          break;
+        case lunalib.BotStatus.ERROR:
+          bulletStatus = BotStatus.RETRY;
           break;
         default:
           bulletStatus = BotStatus.FAILED;
@@ -1092,11 +1169,23 @@ class JobRunner {
 
       return finalResult;
     } catch (e) {
+
+      // Check if this error should trigger a retry (proxy failure)
+      BotStatus status = BotStatus.FAILED;
+      
+      if (usedProxyString != null) {
+        // Assume exception with proxy is a proxy failure (timeout, connection error, etc.)
+        status = BotStatus.RETRY;
+        _handleProxyFailure(usedProxyString);
+        _updateProxyStatus(usedProxyString, ProxyState.bad);
+        _markProxyTested(usedProxyString);
+      }
+
       // Return bot result for exception
       final exceptionResult = BotExecutionResult(
         botId: workerBotId,
         data: dataLine,
-        status: BotStatus.FAILED,
+        status: status,
         timestamp: DateTime.now(),
         proxy: usedProxyString,
         elapsed: null,
@@ -1166,12 +1255,16 @@ class JobRunner {
       ({String dataLine, int dataIndex})? workItem;
       int currentIndex;
 
-      currentIndex = queueIndex[0];
-      if (currentIndex >= workQueue.length) {
-        // No more work available
+      // Safe concurrent access simulation
+      // In Dart isolates, this runs sequentially with respect to other async operations in the event loop,
+      // but "concurrently" in logical flow. Since queueIndex is shared object reference in same isolate,
+      // this atomic-like read-update is safe.
+      if (queueIndex[0] >= workQueue.length) {
+        // No more work available, exit!
         break;
       }
 
+      currentIndex = queueIndex[0];
       queueIndex[0] = currentIndex + 1; 
       workItem = workQueue[currentIndex];
 
@@ -1182,8 +1275,13 @@ class JobRunner {
         workerBotId,
         workItem.dataIndex,
       );
-      onResult(result);
 
+      if (result.status == BotStatus.RETRY) {
+         // Add back to queue to retry again
+         workQueue.add(workItem);
+      }
+      
+      onResult(result);
     }
   }
 }
