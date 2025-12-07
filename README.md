@@ -52,7 +52,7 @@ Typical use cases span large‑scale data collection and extraction, robust resp
 • Config management and editing  
 • CustomInputs support  
 • Hits DB with search, filters, and export  
-• Wordlist management with type selection  
+• Wordlist management with standard and custom wordlist types (regex and separator based parsing)  
 • Proxy testing with concurrency control and periodic persistence  
 • Foreground service + notifications on Android  
 • Modern UI using Geist
