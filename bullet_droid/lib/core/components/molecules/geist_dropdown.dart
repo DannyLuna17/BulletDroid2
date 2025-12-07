@@ -555,7 +555,7 @@ class GeistDropdownFormField<T> extends FormField<T> {
                SizedBox(height: GeistSpacing.xs),
                GeistDropdown<T>(
                  label: field.value != null
-                     ? itemLabelBuilder(field.value!)
+                     ? itemLabelBuilder(field.value as T)
                      : 'Select...',
                  value: field.value ?? items.first,
                  items: items,

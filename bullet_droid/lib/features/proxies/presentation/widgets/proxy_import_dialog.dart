@@ -192,7 +192,7 @@ class _ProxyImportDialogState extends State<ProxyImportDialog> {
         });
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         context.showErrorToast('Failed to load file: $e');
       }
     }

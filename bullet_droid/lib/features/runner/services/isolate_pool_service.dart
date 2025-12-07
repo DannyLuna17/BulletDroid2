@@ -67,7 +67,9 @@ class IsolatePoolService {
       for (final worker in _workers) {
         try {
           await worker.dispose();
-        } catch (disposeError) {}
+        } catch (disposeError) {
+          // Ignore error
+        }
       }
       _workers.clear();
 
@@ -379,6 +381,7 @@ class IsolateWorker {
     try {
       receivePort?.close();
     } catch (e) {
+      // Ignore error
     }
 
     receivePort = ReceivePort();
@@ -405,13 +408,17 @@ class IsolateWorker {
                 _terminalCompleter?.complete();
                 _terminalCompleter = null;
               } else {}
-            } catch (e) {}
+            } catch (e) {
+              // Ignore error
+            }
             break;
           case 'BOT_RESULT':
             try {
               final botUpdate = BotResultUpdate.fromJson(message['data']);
               botResultsController.add(botUpdate);
-            } catch (e) {}
+            } catch (e) {
+              // Ignore error
+            }
             break;
           case 'PROXY_UPDATE':
             final proxyUpdate = ProxyUpdate.fromJson(message['data']);
@@ -508,10 +515,7 @@ class IsolateWorker {
                 // Ensure proper JSON serialization across isolate boundary
                 final jsonString = jsonEncode(proxyUpdate.toJson());
                 final jsonData = jsonDecode(jsonString);
-                replyPort.send({
-                  'type': 'PROXY_UPDATE',
-                  'data': jsonData,
-                });
+                replyPort.send({'type': 'PROXY_UPDATE', 'data': jsonData});
               },
             );
 
@@ -575,7 +579,7 @@ class JobRunner {
   // Update real counters when bot results are processed
   void _updateRealCounters(BotExecutionResult result) {
     final validResult = _createValidDataResult(result);
-    
+
     // Only increment processed count if it s not a retry (since retries are re-queued)
     if (result.status != BotStatus.RETRY) {
       _realProcessed++;
@@ -610,7 +614,7 @@ class JobRunner {
 
   String _getNextProxy() {
     if (_activeProxies.isEmpty) {
-      if (_badProxies.isEmpty) return ''; 
+      if (_badProxies.isEmpty) return '';
       // If we somehow emptied active proxies but haven't triggered reset
       // Fallback: refill from bad proxies just to keep going
       // Normally _markProxyTested will handle reset so this should not happen.
@@ -633,8 +637,10 @@ class JobRunner {
   void _markProxyTested(String proxy) {
     _testedProxies.add(proxy);
     if (_testedProxies.length >= _uniqueProxyCount && _uniqueProxyCount > 0) {
-      Log.i('All $_uniqueProxyCount proxies tested. Resetting pool and counters.');
-      
+      Log.i(
+        'All $_uniqueProxyCount proxies tested. Resetting pool and counters.',
+      );
+
       // Restore full list
       _activeProxies = List.from(params.proxies);
       _badProxies.clear();
@@ -697,7 +703,9 @@ class JobRunner {
           fails: _realFails,
           customs: _realCustoms,
           // Exclude retries from CPM calculation
-          toChecks: _realToChecks.where((r) => r.status != BotStatus.RETRY).toList(),
+          toChecks: _realToChecks
+              .where((r) => r.status != BotStatus.RETRY)
+              .toList(),
         );
 
         // Track when CPM becomes 0 to stop timer after inactivity
@@ -755,7 +763,9 @@ class JobRunner {
       });
 
       // Proxy update timer (every 1 second)
-      _proxyUpdateTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      _proxyUpdateTimer = Timer.periodic(const Duration(milliseconds: 500), (
+        timer,
+      ) {
         if (_shouldStop) {
           timer.cancel();
           return;
@@ -766,11 +776,7 @@ class JobRunner {
           _pendingProxyUpdates.clear();
 
           onProxyUpdate(
-            ProxyUpdate(
-              jobId: jobId,
-              runnerId: runnerId,
-              proxies: updates,
-            ),
+            ProxyUpdate(jobId: jobId, runnerId: runnerId, proxies: updates),
           );
         }
       });
@@ -778,7 +784,7 @@ class JobRunner {
       // If single thread, run sequentially for simplicity
       if (params.threads <= 1) {
         const workerBotId = 1;
-        
+
         // Queue to append retries to the end
         final processingQueue = <int>[];
         for (int i = params.startIndex; i < params.dataLines.length; i++) {
@@ -792,7 +798,7 @@ class JobRunner {
           }
 
           final dataLineIndex = processingQueue[queueIndex];
-          queueIndex++; 
+          queueIndex++;
 
           final dataLine = params.dataLines[dataLineIndex];
 
@@ -831,7 +837,6 @@ class JobRunner {
 
             onBotResult(result);
           } catch (e) {
-
             // Create a failed result
             final failedResult = BotExecutionResult(
               status: BotStatus.FAILED,
@@ -941,7 +946,6 @@ class JobRunner {
       _cpmTimer?.cancel();
       _cleanupTimer?.cancel();
       _proxyUpdateTimer?.cancel();
-
     } catch (e) {
       _cpmTimer?.cancel();
       _cleanupTimer?.cancel();
@@ -992,10 +996,36 @@ class JobRunner {
     int workerBotId,
     int dataLineIndex,
   ) async {
+    String effectiveInput = dataLine;
+    Map<String, String>? sliceVariables;
+
+    if (dataLine.startsWith('__BDWLJSON__')) {
+      try {
+        final payload =
+            jsonDecode(dataLine.replaceFirst('__BDWLJSON__', '')) as Map;
+        effectiveInput = payload['raw']?.toString() ?? dataLine;
+        final slices = payload['slices'];
+        if (slices is Map) {
+          sliceVariables = slices.map(
+            (key, value) => MapEntry(key.toString(), value.toString()),
+          );
+        }
+      } catch (_) {
+        effectiveInput = dataLine;
+      }
+    }
+
     String? usedProxyString;
 
     try {
-      final botData = lunalib.BotData(input: dataLine);
+      final botData = lunalib.BotData(input: effectiveInput);
+      if (sliceVariables != null) {
+        for (final entry in sliceVariables.entries) {
+          botData.variables.set(
+            lunalib.VariableFactory.fromObject(entry.key, entry.value),
+          );
+        }
+      }
 
       // Set custom input variables if available
       if (params.customInputs != null) {
@@ -1014,16 +1044,16 @@ class JobRunner {
         final proxyString = _getNextProxy();
 
         if (proxyString.isNotEmpty) {
-           final proxy = _parseProxyString(proxyString);
-           if (proxy != null) {
-             botData.proxy = proxy;
-             botData.useProxy = true;
-             usedProxyString = proxyString;
-           } else {
-             usedProxyString = null;
-           }
+          final proxy = _parseProxyString(proxyString);
+          if (proxy != null) {
+            botData.proxy = proxy;
+            botData.useProxy = true;
+            usedProxyString = proxyString;
+          } else {
+            usedProxyString = null;
+          }
         } else {
-           usedProxyString = null;
+          usedProxyString = null;
         }
       } else {
         if (!params.useProxies) {
@@ -1034,7 +1064,7 @@ class JobRunner {
       // Send initial bot result to show bot is running
       final runningBotResult = BotExecutionResult(
         botId: workerBotId,
-        data: dataLine,
+        data: effectiveInput,
         status: BotStatus.running,
         timestamp: DateTime.now(),
         proxy: usedProxyString,
@@ -1048,7 +1078,7 @@ class JobRunner {
       // Show processing status
       final processingBotResult = BotExecutionResult(
         botId: workerBotId,
-        data: dataLine,
+        data: effectiveInput,
         status: BotStatus.running,
         timestamp: DateTime.now(),
         proxy: usedProxyString,
@@ -1065,6 +1095,11 @@ class JobRunner {
         botData,
         (String blockProgress) {
           // Send real-time block progress update
+          // try {
+          //   Log.i(
+          //     'Block progress: $blockProgress vars=${botData.variables.getAll().map((v) => "${v.name}=${v.asObject()}").toList()}',
+          //   );
+          // } catch (_) {}
           final blockProgressResult = BotExecutionResult(
             botId: workerBotId,
             data: dataLine,
@@ -1156,7 +1191,7 @@ class JobRunner {
 
       final finalResult = BotExecutionResult(
         botId: workerBotId,
-        data: dataLine,
+        data: effectiveInput,
         status: bulletStatus,
         timestamp: DateTime.now(),
         proxy: usedProxyString,
@@ -1166,13 +1201,15 @@ class JobRunner {
         currentStatus: "<<< FINISHED WITH RESULT: $finalStatus >>>",
         currentDataIndex: dataLineIndex,
       );
+      // Log.i(
+      //   'Bot finished status=$bulletStatus customStatus=${result.customStatus} input="$effectiveInput" slices=${sliceVariables ?? {}} captures=${finalResult.captures}',
+      // );
 
       return finalResult;
     } catch (e) {
-
       // Check if this error should trigger a retry (proxy failure)
       BotStatus status = BotStatus.FAILED;
-      
+
       if (usedProxyString != null) {
         // Assume exception with proxy is a proxy failure (timeout, connection error, etc.)
         status = BotStatus.RETRY;
@@ -1184,7 +1221,7 @@ class JobRunner {
       // Return bot result for exception
       final exceptionResult = BotExecutionResult(
         botId: workerBotId,
-        data: dataLine,
+        data: effectiveInput,
         status: status,
         timestamp: DateTime.now(),
         proxy: usedProxyString,
@@ -1194,6 +1231,9 @@ class JobRunner {
         currentStatus: "<<< EXECUTION ERROR >>>",
         currentDataIndex: dataLineIndex,
       );
+      // Log.e(
+      //   'Bot exception status=$status input="$effectiveInput" slices=${sliceVariables ?? {}} error=$e',
+      // );
 
       return exceptionResult;
     }
@@ -1265,7 +1305,7 @@ class JobRunner {
       }
 
       currentIndex = queueIndex[0];
-      queueIndex[0] = currentIndex + 1; 
+      queueIndex[0] = currentIndex + 1;
       workItem = workQueue[currentIndex];
 
       // Process the data line
@@ -1277,10 +1317,10 @@ class JobRunner {
       );
 
       if (result.status == BotStatus.RETRY) {
-         // Add back to queue to retry again
-         workQueue.add(workItem);
+        // Add back to queue to retry again
+        workQueue.add(workItem);
       }
-      
+
       onResult(result);
     }
   }

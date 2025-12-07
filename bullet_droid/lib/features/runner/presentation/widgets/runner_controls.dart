@@ -6,10 +6,12 @@ import 'package:bullet_droid/core/design_tokens/spacing.dart';
 import 'package:bullet_droid/core/components/atoms/geist_button.dart';
 import 'package:bullet_droid/core/components/atoms/geist_input.dart';
 import 'package:bullet_droid/core/components/molecules/geist_dropdown.dart';
+import 'package:bullet_droid/core/extensions/toast_extensions.dart';
 
 import 'package:bullet_droid/features/runner/models/runner_instance.dart';
 import 'package:bullet_droid/features/runner/providers/runner_provider.dart';
 import 'package:bullet_droid/features/configs/providers/configs_provider.dart';
+import 'package:bullet_droid/features/configs/models/config_summary.dart';
 import 'package:bullet_droid/features/wordlists/providers/wordlists_provider.dart';
 
 class RunnerControls extends ConsumerWidget {
@@ -139,7 +141,7 @@ class RunnerControls extends ConsumerWidget {
                               ? configs.first.id
                               : ''),
                     items: runnerInstance.selectedConfigId == null
-                        ? ['', ...configs.map((c) => c.id).toList()]
+                        ? ['', ...configs.map((c) => c.id)]
                         : configs.map((c) => c.id).toList(),
                     itemLabelBuilder: (String configId) => configId.isEmpty
                         ? 'Select Config'
@@ -186,7 +188,7 @@ class RunnerControls extends ConsumerWidget {
                               ? wordlists.first.id
                               : ''),
                     items: runnerInstance.selectedWordlistId == null
-                        ? ['', ...wordlists.map((w) => w.id).toList()]
+                        ? ['', ...wordlists.map((w) => w.id)]
                         : wordlists.map((w) => w.id).toList(),
                     itemLabelBuilder: (String wordlistId) => wordlistId.isEmpty
                         ? 'Select Wordlist'
@@ -194,6 +196,30 @@ class RunnerControls extends ConsumerWidget {
                     onChanged: runnerInstance.isRunning
                         ? (value) {}
                         : (value) {
+                            if (value.isNotEmpty &&
+                                runnerInstance.selectedConfigId != null) {
+                              final wl = wordlists.firstWhere(
+                                (w) => w.id == value,
+                                orElse: () => wordlists.first,
+                              );
+                              ConfigSummary? cfg;
+                              for (final c in configs) {
+                                if (c.id == runnerInstance.selectedConfigId) {
+                                  cfg = c;
+                                  break;
+                                }
+                              }
+                              if (cfg != null) {
+                                final allowed = _allowedWordlistTypes(cfg.metadata);
+                                if (allowed.isNotEmpty &&
+                                    !allowed.contains(wl.type)) {
+                                  context.showErrorToast(
+                                    'Wordlist type "${wl.type}" not allowed. Allowed: ${allowed.join(", ")}',
+                                  );
+                                  return;
+                                }
+                              }
+                            }
                             ref
                                 .read(multiRunnerProvider.notifier)
                                 .updateSelectedWordlistForRunner(
@@ -253,5 +279,11 @@ class RunnerControls extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  List<String> _allowedWordlistTypes(Map<String, dynamic> metadata) {
+    final w1 = metadata['AllowedWordlist1']?.toString().trim() ?? '';
+    final w2 = metadata['AllowedWordlist2']?.toString().trim() ?? '';
+    return [w1, w2].where((w) => w.isNotEmpty).toList();
   }
 }

@@ -113,8 +113,8 @@ class _StartupLoadingScreen extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 24),
                 child: Image.asset(
                   'assets/icons/app_icon.png',
-                  width: 128,
-                  height: 128,
+                  width: 256,
+                  height: 256,
                 ),
               ),
               // Title

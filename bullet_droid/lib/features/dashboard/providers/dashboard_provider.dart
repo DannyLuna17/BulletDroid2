@@ -558,7 +558,9 @@ class ConfigExecutionsNotifier extends StateNotifier<List<ConfigExecution>> {
         await _ref
             .read(multiRunnerProvider.notifier)
             .stopJobForRunner(runnerId);
-      } catch (e) {}
+      } catch (e) {
+        // Ignore error if runner is already stopped or not found
+      }
     }
 
     // Cancel progress subscription

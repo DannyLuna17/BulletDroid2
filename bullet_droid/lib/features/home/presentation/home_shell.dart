@@ -16,7 +16,7 @@ class HomeShell extends ConsumerWidget {
     final location = router.routerDelegate.currentConfiguration.uri.toString();
 
     // Hide floating navigation on specific routes
-    const toHide = <String>{AppPath.runner, AppPath.hitsDb};
+    const toHide = <String>{AppPath.runner, AppPath.hitsDb, AppPath.customWordlistTypes};
 
     final showFloatingNav =
         (!toHide.any(location.startsWith) || (location.startsWith('/configs')));

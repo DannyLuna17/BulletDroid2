@@ -64,10 +64,10 @@ class GeistFormField extends StatefulWidget {
   });
 
   @override
-  State<GeistFormField> createState() => _GeistFormFieldState();
+  State<GeistFormField> createState() => GeistFormFieldState();
 }
 
-class _GeistFormFieldState extends State<GeistFormField> {
+class GeistFormFieldState extends State<GeistFormField> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
   String? _errorText;
@@ -528,7 +528,7 @@ class GeistFormFieldVariants {
 /// Form validation utilities
 class GeistFormValidation {
   /// Check if all form fields are valid
-  static bool validateForm(List<GlobalKey<_GeistFormFieldState>> fieldKeys) {
+  static bool validateForm(List<GlobalKey<GeistFormFieldState>> fieldKeys) {
     bool allValid = true;
 
     for (final key in fieldKeys) {
@@ -543,7 +543,7 @@ class GeistFormValidation {
 
   /// Clear validation for all form fields
   static void clearFormValidation(
-    List<GlobalKey<_GeistFormFieldState>> fieldKeys,
+    List<GlobalKey<GeistFormFieldState>> fieldKeys,
   ) {
     for (final key in fieldKeys) {
       key.currentState?.clearValidation();

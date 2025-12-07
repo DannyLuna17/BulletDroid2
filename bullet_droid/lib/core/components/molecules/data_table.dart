@@ -161,7 +161,7 @@ class _GeistDataTableState extends State<GeistDataTable> {
           final index = entry.key;
           final column = entry.value;
           return _buildHeaderCell(column, index, isMobile);
-        }).toList(),
+        }),
       ],
     );
   }
@@ -330,7 +330,7 @@ class _GeistDataTableState extends State<GeistDataTable> {
               final cellIndex = entry.key;
               final cell = entry.value;
               return _buildDataCell(cell, cellIndex, isMobile);
-            }).toList(),
+            }),
           ],
         ),
       ),
@@ -363,7 +363,7 @@ class _GeistDataTableState extends State<GeistDataTable> {
   }
 
   Widget _buildLoadingState() {
-    return Container(
+    return SizedBox(
       height: 200,
       child: Center(
         child: Column(
@@ -384,7 +384,7 @@ class _GeistDataTableState extends State<GeistDataTable> {
   }
 
   Widget _buildEmptyState() {
-    return Container(
+    return SizedBox(
       height: 200,
       child: Center(
         child: Column(

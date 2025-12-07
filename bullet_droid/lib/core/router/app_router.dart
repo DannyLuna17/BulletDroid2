@@ -14,6 +14,7 @@ import 'package:bullet_droid/features/settings/presentation/settings_screen.dart
 import 'package:bullet_droid/features/settings/presentation/hits_db_screen.dart';
 import 'package:bullet_droid/features/settings/presentation/license_page.dart';
 import 'package:bullet_droid/features/wordlists/presentation/wordlists_screen.dart';
+import 'package:bullet_droid/features/wordlists/presentation/custom_wordlist_types_screen.dart';
 
 /// App-wide router configured with a global navigator key.
 /// Route names and paths are defined by [AppRoute] and [AppPath] enums below
@@ -92,6 +93,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: AppPath.customWordlistTypes,
+            name: AppRoute.customWordlistTypes,
+            pageBuilder: (context, state) => NoTransitionPage(
+              key: state.pageKey,
+              child: const CustomWordlistTypesScreen(),
+            ),
+          ),
+          GoRoute(
             path: AppPath.hitsDb,
             name: AppRoute.hitsDb,
             pageBuilder: (context, state) => NoTransitionPage(
@@ -126,6 +135,7 @@ class AppRoute {
   static const String proxies = 'proxies';
   static const String wordlists = 'wordlists';
   static const String settings = 'settings';
+  static const String customWordlistTypes = 'custom-wordlist-types';
   static const String hitsDb = 'hits-db';
   static const String configDetails = 'config-details';
   static const String licenses = 'licenses';
@@ -139,6 +149,7 @@ class AppPath {
   static const String proxies = '/proxies';
   static const String wordlists = '/wordlists';
   static const String settings = '/settings';
+  static const String customWordlistTypes = '/custom-wordlist-types';
   static const String hitsDb = '/hits-db';
   static const String configDetails = '/configs/:id';
   static const String licenses = '/licenses';

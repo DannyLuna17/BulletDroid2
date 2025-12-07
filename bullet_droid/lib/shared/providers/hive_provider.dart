@@ -29,6 +29,7 @@ final hiveInitProvider = FutureProvider<void>((ref) async {
     Hive.openBox('proxyLists'),
     Hive.openBox('jobHistory'),
     Hive.openBox('wordlistMetadata'),
+    Hive.openBox('customWordlistTypes'),
     Hive.openBox('dashboardExecutions'),
     Hive.openBox('hits'),
     Hive.openBox('hits_db_ui_state'),
@@ -60,6 +61,11 @@ final jobHistoryBoxProvider = Provider<Box>((ref) {
 // Provider for wordlist metadata box
 final wordlistMetadataBoxProvider = Provider<Box>((ref) {
   return Hive.box('wordlistMetadata');
+});
+
+// Provider for custom wordlist types box
+final customWordlistTypesBoxProvider = Provider<Box>((ref) {
+  return Hive.box('customWordlistTypes');
 });
 
 // Provider for dashboard executions box

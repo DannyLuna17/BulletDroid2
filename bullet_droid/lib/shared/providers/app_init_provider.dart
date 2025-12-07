@@ -5,6 +5,7 @@ import 'package:bullet_droid/shared/providers/custom_input_provider.dart';
 import 'package:bullet_droid/core/utils/logging.dart';
 import 'package:bullet_droid/features/configs/providers/configs_provider.dart';
 import 'package:bullet_droid/features/wordlists/providers/wordlists_provider.dart';
+import 'package:bullet_droid/features/wordlists/providers/custom_wordlist_types_provider.dart';
 import 'package:bullet_droid/features/dashboard/providers/dashboard_provider.dart';
 import 'package:bullet_droid/features/runner/providers/runner_provider.dart';
 
@@ -18,6 +19,7 @@ final appDataInitProvider = FutureProvider<void>((ref) async {
     _initCustomInputProvider(ref),
     _loadConfigs(ref),
     _loadWordlists(ref),
+    _loadCustomWordlistTypes(ref),
     _loadDashboardExecutions(ref),
     _initRunnerProvider(ref),
   ]);
@@ -36,6 +38,14 @@ Future<void> _loadWordlists(Ref ref) async {
     ref.read(wordlistsProvider);
   } catch (e) {
     Log.w('Error loading wordlists: $e');
+  }
+}
+
+Future<void> _loadCustomWordlistTypes(Ref ref) async {
+  try {
+    ref.read(customWordlistTypesProvider);
+  } catch (e) {
+    Log.w('Error loading custom wordlist types: $e');
   }
 }
 

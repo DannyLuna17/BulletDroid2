@@ -495,12 +495,14 @@ class _BlocksSectionState extends ConsumerState<_BlocksSection> {
       // Save to file system
       await _saveConfigToFile();
 
-      context.showSuccessToast('Changes saved successfully');
+      if (mounted) {
+        context.showSuccessToast('Changes saved successfully');
 
-      setState(() {
-        _hasUnsavedChanges = false;
-        _isEditMode = false;
-      });
+        setState(() {
+          _hasUnsavedChanges = false;
+          _isEditMode = false;
+        });
+      }
     } catch (e) {
       _showErrorMessage('Error saving changes: $e');
     }

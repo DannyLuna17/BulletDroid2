@@ -694,15 +694,15 @@ class _HitsDbScreenState extends ConsumerState<HitsDbScreen>
                           ],
                         ),
                         Positioned(
-                          bottom: 8,
-                          right: 8,
+                          bottom: 0,
+                          right: 0,
                           child: Tooltip(
                             message: 'Swipe left to delete this hit',
                             preferBelow: false,
                             triggerMode: TooltipTriggerMode.tap,
                             child: Icon(
                               Icons.info_outline,
-                              size: 16,
+                              size: 20,
                               color: GeistColors.gray400,
                             ),
                           ),

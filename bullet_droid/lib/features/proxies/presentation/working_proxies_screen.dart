@@ -277,7 +277,7 @@ class _WorkingProxiesScreenState extends ConsumerState<WorkingProxiesScreen> {
                   customColor: GeistColors.lightTextPrimary,
                 ),
                 SizedBox(width: GeistSpacing.sm),
-                Expanded(child: _ProxyStatsRow(proxiesState: proxiesState)),
+                Expanded(child: _proxyStatsRow(proxiesState: proxiesState)),
               ],
             ),
           ],
@@ -299,7 +299,7 @@ class _WorkingProxiesScreenState extends ConsumerState<WorkingProxiesScreen> {
               customColor: GeistColors.lightTextPrimary,
             ),
             SizedBox(width: GeistSpacing.xs),
-            Expanded(child: _ProxyStatsRow(proxiesState: proxiesState)),
+            Expanded(child: _proxyStatsRow(proxiesState: proxiesState)),
           ],
         ),
       );
@@ -307,7 +307,7 @@ class _WorkingProxiesScreenState extends ConsumerState<WorkingProxiesScreen> {
   }
 
   // Proxy Stats Row Widget for expanded view
-  Widget _ProxyStatsRow({required ProxiesState proxiesState}) {
+  Widget _proxyStatsRow({required ProxiesState proxiesState}) {
     final selectedTypes = ref.watch(selectedProxyTypesProvider);
     final list = proxiesState.filteredByTypes(selectedTypes);
     final alive = list.where((p) => p.status == ProxyStatus.alive).length;
@@ -317,22 +317,22 @@ class _WorkingProxiesScreenState extends ConsumerState<WorkingProxiesScreen> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _StatusPill(
+          _statusPill(
             color: GeistColors.lightTextSecondary,
             count: list.length,
             label: 'Total',
           ),
-          _StatusPill(
+          _statusPill(
             color: GeistColors.successColor,
             count: alive,
             label: 'Working',
           ),
-          _StatusPill(
+          _statusPill(
             color: GeistColors.errorColor,
             count: dead,
             label: 'Dead',
           ),
-          _StatusPill(
+          _statusPill(
             color: GeistColors.lightTextTertiary,
             count: untested,
             label: 'Untested',
@@ -547,7 +547,7 @@ class _WorkingProxiesScreenState extends ConsumerState<WorkingProxiesScreen> {
   }
 
   // Status Pill Widget for expanded view
-  Widget _StatusPill({
+  Widget _statusPill({
     required Color color,
     required int count,
     required String label,
@@ -637,10 +637,14 @@ class _WorkingProxiesScreenState extends ConsumerState<WorkingProxiesScreen> {
         final content = proxies.map((p) => '${p.address}:${p.port}').join('\n');
         await File(path).writeAsString(content);
 
-        context.showSuccessToast('Exported ${proxies.length} proxies');
+        if (mounted) {
+          context.showSuccessToast('Exported ${proxies.length} proxies');
+        }
       }
     } catch (e) {
-      context.showErrorToast('Export failed: $e');
+      if (mounted) {
+        context.showErrorToast('Export failed: $e');
+      }
     }
   }
 
@@ -744,11 +748,15 @@ class _WorkingProxiesScreenState extends ConsumerState<WorkingProxiesScreen> {
         shouldContinue: () => _isRunning,
       );
     } catch (e) {
-      context.showErrorToast('Testing failed: $e');
+      if (mounted) {
+        context.showErrorToast('Testing failed: $e');
+      }
     } finally {
-      setState(() {
-        _isRunning = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isRunning = false;
+        });
+      }
     }
   }
 
@@ -2415,7 +2423,9 @@ class _ProxyImportDialogState extends State<_ProxyImportDialog> {
         });
       }
     } catch (e) {
-      context.showErrorToast('Failed to load file: $e');
+      if (mounted) {
+        context.showErrorToast('Failed to load file: $e');
+      }
     }
   }
 

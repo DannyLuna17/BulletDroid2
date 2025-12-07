@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bullet_droid/shared/utils/wordlist_utils.dart';
+import 'dart:convert';
 import 'package:go_router/go_router.dart';
 import 'package:bullet_droid/core/router/app_router.dart';
 import 'dart:io';
@@ -15,6 +16,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:bullet_droid/features/runner/providers/runner_provider.dart';
 import 'package:bullet_droid/features/configs/providers/configs_provider.dart';
 import 'package:bullet_droid/features/wordlists/providers/wordlists_provider.dart';
+import 'package:bullet_droid/features/wordlists/providers/custom_wordlist_types_provider.dart';
+import 'package:bullet_droid/features/wordlists/models/custom_wordlist_type.dart';
 
 import 'package:bullet_droid/features/runner/models/job_params.dart';
 import 'package:bullet_droid/features/runner/models/runner_instance.dart';
@@ -277,8 +280,8 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen>
                 // Collapse button, positioned at border between table and tabs (half visible)
                 Positioned(
                   bottom: (_isBottomSectionExpanded
-                              ? _bottomSectionHeightExpanded + _collapseButtonOverlap
-                              : _bottomSectionHeightCollapsed + _collapseButtonOverlap),
+                      ? _bottomSectionHeightExpanded + _collapseButtonOverlap
+                      : _bottomSectionHeightCollapsed + _collapseButtonOverlap),
                   right: 16,
                   child: CollapseButton(
                     isExpanded: _isBottomSectionExpanded,
@@ -462,12 +465,37 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen>
         (w) => w.id == runnerInstance.selectedWordlistId,
       );
 
+      // Validate wordlist type against config requirement
+      final allowedTypes = _allowedWordlistTypes(config.metadata);
+      if (allowedTypes.isNotEmpty && !allowedTypes.contains(wordlist.type)) {
+        context.showErrorToast(
+          'Selected wordlist type "${wordlist.type}" is not allowed for this config. Allowed: ${allowedTypes.join(", ")}',
+        );
+        return;
+      }
+
       // Read and process wordlist file content
       final wordlistFile = File(wordlist.path);
-      final dataLines = await WordlistUtils.readAndProcessFile(wordlistFile);
+      final rawLines = await WordlistUtils.readAndProcessFile(wordlistFile);
+
+      // Apply custom wordlist type parsing if applicable
+      List<String> dataLines = rawLines;
+      CustomWordlistType? customType;
+      for (final t in ref.read(customWordlistTypesProvider).types) {
+        if (t.name == wordlist.type) {
+          customType = t;
+          break;
+        }
+      }
+
+      if (customType != null) {
+        dataLines = _parseCustomWordlistLines(rawLines, customType);
+      }
 
       if (dataLines.isEmpty) {
-        context.showErrorToast('No valid data lines found in wordlist');
+        if (mounted) {
+          context.showErrorToast('No valid data lines found in wordlist');
+        }
         return;
       }
 
@@ -486,9 +514,11 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen>
         ];
 
         if (eligibleProxies.isEmpty) {
-          context.showErrorToast(
-            'No eligible proxies (alive/untested) available',
-          );
+          if (mounted) {
+            context.showErrorToast(
+              'No eligible proxies (alive/untested) available',
+            );
+          }
           return;
         }
 
@@ -519,7 +549,9 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen>
           .read(multiRunnerProvider.notifier)
           .startJobForRunner(runnerId, jobParams);
     } catch (e) {
-      context.showErrorToast('Failed to start job: $e');
+      if (mounted) {
+        context.showErrorToast('Failed to start job: $e');
+      }
     }
   }
 
@@ -534,5 +566,75 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen>
     } else {
       return RunnerContext.configExisting;
     }
+  }
+
+  List<String> _allowedWordlistTypes(Map<String, dynamic> metadata) {
+    final w1 = metadata['AllowedWordlist1']?.toString().trim() ?? '';
+    final w2 = metadata['AllowedWordlist2']?.toString().trim() ?? '';
+    return [w1, w2].where((w) => w.isNotEmpty).toList();
+  }
+
+  List<String> _parseCustomWordlistLines(
+    List<String> lines,
+    CustomWordlistType type,
+  ) {
+    final List<String> parsed = [];
+    // int matched = 0;
+    // int skipped = 0;
+    RegExp? regExp;
+    try {
+      regExp = RegExp(type.regex);
+    } catch (_) {
+      return [];
+    }
+
+    for (final line in lines) {
+      Map<String, String>? sliceMap;
+
+      final match = regExp.firstMatch(line);
+      if (match != null && match.start != match.end) {
+        final captures = <String>[];
+        if (match.groupCount > 0) {
+          for (int i = 1; i <= match.groupCount; i++) {
+            captures.add(match.group(i) ?? '');
+          }
+        } else {
+          captures.add(match.group(0) ?? '');
+        }
+        final hasContent = captures.any((c) => c.isNotEmpty);
+        if (!hasContent) {
+          // Treat fully empty captures as non-match to avoid empty payloads
+          // skipped++;
+          continue;
+        }
+        sliceMap = _mapSlices(type.slices, captures);
+      } else if (type.separator.isNotEmpty) {
+        final parts = line.split(type.separator);
+        if (parts.length >= type.slices.length) {
+          sliceMap = _mapSlices(type.slices, parts);
+        }
+      }
+
+      if (sliceMap == null) {
+        // skip non-matching line
+        // skipped++;
+        continue;
+      }
+
+      final payload = {'raw': line, 'slices': sliceMap};
+      parsed.add('__BDWLJSON__${jsonEncode(payload)}');
+      // matched++;
+    }
+
+    return parsed;
+  }
+
+  Map<String, String> _mapSlices(List<String> sliceNames, List<String> values) {
+    final map = <String, String>{};
+    for (int i = 0; i < sliceNames.length; i++) {
+      final val = i < values.length ? values[i] : '';
+      map[sliceNames[i]] = val;
+    }
+    return map;
   }
 }

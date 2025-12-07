@@ -22,10 +22,14 @@ class ConfigsScreen extends ConsumerStatefulWidget {
   ConsumerState<ConfigsScreen> createState() => _ConfigsScreenState();
 }
 
-class _ConfigsScreenState extends ConsumerState<ConfigsScreen> {
+class _ConfigsScreenState extends ConsumerState<ConfigsScreen>
+    with TickerProviderStateMixin {
   late TextEditingController _searchController;
   bool _showDeleteConfirmation = false;
   String? _configDeleteConfirmation;
+
+  final Map<String, AnimationController> _swipeControllers = {};
+  final Map<String, Animation<double>> _swipeAnimations = {};
 
   @override
   void initState() {
@@ -36,7 +40,44 @@ class _ConfigsScreenState extends ConsumerState<ConfigsScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    // Dispose all animation controllers
+    for (final controller in _swipeControllers.values) {
+      controller.dispose();
+    }
+    _swipeControllers.clear();
+    _swipeAnimations.clear();
     super.dispose();
+  }
+
+  // Get or create animation controller for a config card
+  AnimationController _getSwipeController(String configId) {
+    if (!_swipeControllers.containsKey(configId)) {
+      final controller = AnimationController(
+        duration: const Duration(milliseconds: 200),
+        vsync: this,
+      );
+      _swipeControllers[configId] = controller;
+      _swipeAnimations[configId] = Tween<double>(
+        begin: 0.0,
+        end: -60.0,
+      ).animate(CurvedAnimation(parent: controller, curve: Curves.easeOut));
+    }
+    return _swipeControllers[configId]!;
+  }
+
+  // Reset swipe state for a specific config
+  void _resetSwipe(String configId) {
+    final controller = _swipeControllers[configId];
+    if (controller != null) {
+      controller.reverse();
+    }
+  }
+
+  // Reset all swipe states
+  void _resetAllSwipes() {
+    for (final controller in _swipeControllers.values) {
+      controller.reverse();
+    }
   }
 
   @override
@@ -56,6 +97,7 @@ class _ConfigsScreenState extends ConsumerState<ConfigsScreen> {
                 _configDeleteConfirmation = null;
               });
             }
+            _resetAllSwipes();
           },
           child: AppBar(
             backgroundColor: GeistColors.white,
@@ -78,6 +120,7 @@ class _ConfigsScreenState extends ConsumerState<ConfigsScreen> {
               _configDeleteConfirmation = null;
             });
           }
+          _resetAllSwipes();
         },
         child: Stack(
           children: [
@@ -356,194 +399,209 @@ class _ConfigsScreenState extends ConsumerState<ConfigsScreen> {
   }
 
   Widget _buildConfigListCard(ConfigSummary config) {
+    final controller = _getSwipeController(config.id);
+    final animation = _swipeAnimations[config.id]!;
+
     return Container(
       margin: EdgeInsets.only(bottom: GeistSpacing.md),
-      decoration: BoxDecoration(
-        color: GeistColors.white,
-        border: Border.all(color: GeistColors.gray200),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            // Cancel any active confirmations first
-            if (_showDeleteConfirmation || _configDeleteConfirmation != null) {
-              setState(() {
-                _showDeleteConfirmation = false;
-                _configDeleteConfirmation = null;
-              });
-              return;
-            }
-            // Navigate to details only if no confirmations are active
-            _navigateToConfigDetails(config.id);
-          },
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: EdgeInsets.all(GeistSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header row
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          GeistText(
-                            config.name,
-                            variant: GeistTextVariant.headingSmall,
-                          ),
-                          SizedBox(height: GeistSpacing.xs),
-                          GeistText(
-                            'by ${config.author}',
-                            variant: GeistTextVariant.bodyMedium,
-                            customColor: GeistColors.gray600,
-                          ),
-                        ],
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        if (_configDeleteConfirmation == config.id) {
-                          // Confirm deletion
-                          ref
-                              .read(configsProvider.notifier)
-                              .deleteConfig(config.id);
-                          setState(() {
-                            _configDeleteConfirmation = null;
-                          });
-                          context.showSuccessToast(
-                            'Configuration "${config.name}" deleted',
-                          );
-                        } else {
-                          // Show confirmation
-                          setState(() {
-                            _configDeleteConfirmation = config.id;
-                            _showDeleteConfirmation = false;
-                          });
-                        }
-                      },
-                      child: Container(
-                        padding: EdgeInsets.all(4),
-                        child: Icon(
-                          _configDeleteConfirmation == config.id
-                              ? Icons.check
-                              : Icons.delete_outline,
-                          size: 20,
-                          color: GeistColors.red,
-                        ),
-                      ),
-                    ),
-                  ],
+      child: Stack(
+        children: [
+          // Delete background
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              alignment: Alignment.centerRight,
+              padding: EdgeInsets.only(right: GeistSpacing.md),
+              child: GestureDetector(
+                onTap: () {
+                  ref.read(configsProvider.notifier).deleteConfig(config.id);
+                  if (mounted) {
+                    context.showSuccessToast(
+                      'Configuration "${config.name}" deleted',
+                    );
+                  }
+                },
+                child: Container(
+                  padding: EdgeInsets.all(GeistSpacing.sm),
+                  child: Icon(Icons.delete, color: Colors.white, size: 24),
                 ),
-
-                SizedBox(height: GeistSpacing.md),
-
-                // Status and metadata row
-                Row(
-                  children: [
-                    StatusIndicator(
-                      state: config.metadata['NeedsProxies'] == true
-                          ? StatusIndicatorState.success
-                          : StatusIndicatorState.neutral,
-                      size: StatusIndicatorSize.medium,
-                      label: config.metadata['NeedsProxies'] == true
-                          ? 'Proxy Required'
-                          : 'Direct Connect',
-                    ),
-
-                    SizedBox(width: GeistSpacing.md),
-
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: GeistSpacing.sm,
-                        vertical: GeistSpacing.xs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: GeistColors.gray100,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: GeistText(
-                        config.metadata['category']?.toString() ??
-                            'Uncategorized',
-                        variant: GeistTextVariant.bodySmall,
-                      ),
-                    ),
-
-                    const Spacer(),
-
-                    GeistText(
-                      _formatDate(config.createdAt ?? DateTime.now()),
-                      variant: GeistTextVariant.bodySmall,
-                      customColor: GeistColors.gray400,
-                    ),
-                  ],
-                ),
-
-                // Description if available
-                if (config.description != null &&
-                    config.description!.isNotEmpty) ...[
-                  SizedBox(height: GeistSpacing.md),
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(GeistSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: GeistColors.gray100,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: GeistText(
-                      config.description!.length > 150
-                          ? '${config.description!.substring(0, 150)}...'
-                          : config.description!,
-                      variant: GeistTextVariant.bodySmall,
-                    ),
-                  ),
-                ],
-
-                // Statistics if available
-                if (config.totalRuns > 0) ...[
-                  SizedBox(height: GeistSpacing.md),
-                  Row(
-                    children: [
-                      _buildStatChip('Runs', config.totalRuns.toString()),
-                      SizedBox(width: GeistSpacing.sm),
-                      _buildStatChip('Hits', config.hits.toString()),
-                      SizedBox(width: GeistSpacing.sm),
-                      _buildStatChip('Fails', config.fails.toString()),
-                    ],
-                  ),
-                ],
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-    );
-  }
+          // Main card content
+          AnimatedBuilder(
+            animation: animation,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(animation.value, 0),
+                child: GestureDetector(
+                  onHorizontalDragUpdate: (details) {
+                    final currentValue = controller.value;
+                    final delta = details.delta.dx / 300;
 
-  Widget _buildStatChip(String label, String value) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: GeistSpacing.sm,
-        vertical: GeistSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: GeistColors.gray50,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: GeistColors.gray200),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GeistText(
-            label,
-            variant: GeistTextVariant.caption,
-            customColor: GeistColors.gray600,
+                    // Allow left swipe to open and right swipe to close
+                    if (details.delta.dx < 0) {
+                      final newValue = (currentValue - delta).clamp(0.0, 1.0);
+                      controller.value = newValue;
+                    } else if (details.delta.dx > 0 && currentValue > 0) {
+                      final newValue = (currentValue - delta).clamp(0.0, 1.0);
+                      controller.value = newValue;
+                    }
+                  },
+                  onHorizontalDragEnd: (details) {
+                    // Consider both position and velocity for more natural feel
+                    final velocity = details.velocity.pixelsPerSecond.dx;
+
+                    if (velocity < -500) {
+                      controller.forward();
+                    } else if (velocity > 500) {
+                      controller.reverse();
+                    } else if (controller.value > 0.3) {
+                      controller.forward();
+                    } else {
+                      controller.reverse();
+                    }
+                  },
+                  onTap: () {
+                    // Cancel any active confirmations first
+                    if (_showDeleteConfirmation ||
+                        _configDeleteConfirmation != null) {
+                      setState(() {
+                        _showDeleteConfirmation = false;
+                        _configDeleteConfirmation = null;
+                      });
+                      return;
+                    }
+                    _resetSwipe(config.id);
+                    // Navigate to details only if no confirmations are active
+                    _navigateToConfigDetails(config.id);
+                  },
+                  child: Container(
+                    padding: EdgeInsets.all(GeistSpacing.md),
+                    decoration: BoxDecoration(
+                      color: GeistColors.white,
+                      border: Border.all(color: GeistColors.gray200),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Stack(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Header row
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      GeistText(
+                                        config.name,
+                                        variant: GeistTextVariant.headingSmall,
+                                      ),
+                                      SizedBox(height: GeistSpacing.xs),
+                                      GeistText(
+                                        'by ${config.author}',
+                                        variant: GeistTextVariant.bodyMedium,
+                                        customColor: GeistColors.gray600,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            SizedBox(height: GeistSpacing.md),
+
+                            // Status and metadata row
+                            Row(
+                              children: [
+                                StatusIndicator(
+                                  state: config.metadata['NeedsProxies'] == true
+                                      ? StatusIndicatorState.success
+                                      : StatusIndicatorState.neutral,
+                                  size: StatusIndicatorSize.medium,
+                                  label: config.metadata['NeedsProxies'] == true
+                                      ? 'Proxy Required'
+                                      : 'Direct Connect',
+                                ),
+
+                                SizedBox(width: GeistSpacing.md),
+
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: GeistSpacing.sm,
+                                    vertical: GeistSpacing.xs,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: GeistColors.gray100,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: GeistText(
+                                    config.metadata['category']?.toString() ??
+                                        'Uncategorized',
+                                    variant: GeistTextVariant.bodySmall,
+                                  ),
+                                ),
+
+                                const Spacer(),
+
+                                GeistText(
+                                  _formatDate(
+                                    config.createdAt ?? DateTime.now(),
+                                  ),
+                                  variant: GeistTextVariant.bodySmall,
+                                  customColor: GeistColors.gray400,
+                                ),
+                              ],
+                            ),
+
+                            // Description if available
+                            if (config.description != null &&
+                                config.description!.isNotEmpty) ...[
+                              SizedBox(height: GeistSpacing.md),
+                              Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.all(GeistSpacing.sm),
+                                decoration: BoxDecoration(
+                                  color: GeistColors.gray100,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: GeistText(
+                                  config.description!.length > 150
+                                      ? '${config.description!.substring(0, 150)}...'
+                                      : config.description!,
+                                  variant: GeistTextVariant.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Tooltip(
+                            message: 'Swipe left to delete this config',
+                            preferBelow: false,
+                            triggerMode: TooltipTriggerMode.tap,
+                            child: Icon(
+                              Icons.info_outline,
+                              size: 18,
+                              color: GeistColors.gray400,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-          SizedBox(width: GeistSpacing.xs),
-          GeistText(value, variant: GeistTextVariant.caption),
         ],
       ),
     );

@@ -13,6 +13,7 @@ import 'package:bullet_droid/core/extensions/toast_extensions.dart';
 import 'package:bullet_droid/core/components/molecules/geist_dropdown.dart';
 import 'package:bullet_droid/features/wordlists/providers/wordlists_provider.dart';
 import 'package:bullet_droid/features/wordlists/models/wordlist_model.dart';
+import 'package:bullet_droid/features/wordlists/providers/custom_wordlist_types_provider.dart';
 
 class WordlistsScreen extends ConsumerStatefulWidget {
   const WordlistsScreen({super.key});
@@ -21,10 +22,14 @@ class WordlistsScreen extends ConsumerStatefulWidget {
   ConsumerState<WordlistsScreen> createState() => _WordlistsScreenState();
 }
 
-class _WordlistsScreenState extends ConsumerState<WordlistsScreen> {
+class _WordlistsScreenState extends ConsumerState<WordlistsScreen>
+    with TickerProviderStateMixin {
   late TextEditingController _searchController;
   bool _showDeleteConfirmation = false;
   String? _wordlistDeleteConfirmation;
+
+  final Map<String, AnimationController> _swipeControllers = {};
+  final Map<String, Animation<double>> _swipeAnimations = {};
 
   @override
   void initState() {
@@ -35,13 +40,47 @@ class _WordlistsScreenState extends ConsumerState<WordlistsScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    for (final controller in _swipeControllers.values) {
+      controller.dispose();
+    }
+    _swipeControllers.clear();
+    _swipeAnimations.clear();
     super.dispose();
+  }
+
+  AnimationController _getSwipeController(String id) {
+    if (!_swipeControllers.containsKey(id)) {
+      final controller = AnimationController(
+        duration: const Duration(milliseconds: 200),
+        vsync: this,
+      );
+      _swipeControllers[id] = controller;
+      _swipeAnimations[id] = Tween<double>(
+        begin: 0.0,
+        end: -60.0,
+      ).animate(CurvedAnimation(parent: controller, curve: Curves.easeOut));
+    }
+    return _swipeControllers[id]!;
+  }
+
+  void _resetSwipe(String id) {
+    final controller = _swipeControllers[id];
+    if (controller != null) {
+      controller.reverse();
+    }
+  }
+
+  void _resetAllSwipes() {
+    for (final controller in _swipeControllers.values) {
+      controller.reverse();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final wordlistsState = ref.watch(wordlistsProvider);
     final filteredWordlists = ref.watch(filteredWordlistsProvider);
+    final customTypes = ref.watch(customWordlistTypesProvider).types;
 
     return Scaffold(
       backgroundColor: GeistColors.gray50,
@@ -56,6 +95,7 @@ class _WordlistsScreenState extends ConsumerState<WordlistsScreen> {
                 _wordlistDeleteConfirmation = null;
               });
             }
+            _resetAllSwipes();
           },
           child: AppBar(
             backgroundColor: GeistColors.white,
@@ -78,6 +118,7 @@ class _WordlistsScreenState extends ConsumerState<WordlistsScreen> {
               _wordlistDeleteConfirmation = null;
             });
           }
+          _resetAllSwipes();
         },
         child: Stack(
           children: [
@@ -92,6 +133,7 @@ class _WordlistsScreenState extends ConsumerState<WordlistsScreen> {
                         _showDeleteConfirmation = false;
                       });
                     }
+                    _resetAllSwipes();
                   },
                   child: Container(
                     padding: EdgeInsets.only(
@@ -171,36 +213,16 @@ class _WordlistsScreenState extends ConsumerState<WordlistsScreen> {
                             left: GeistSpacing.md,
                             right: GeistSpacing.md,
                             top: GeistSpacing.md,
-                            bottom: GeistSpacing.md + _floatingNavClearance(context),
+                            bottom:
+                                GeistSpacing.md +
+                                _floatingNavClearance(context),
                           ),
                           itemCount: filteredWordlists.length,
                           itemBuilder: (context, index) {
                             final wordlist = filteredWordlists[index];
-                            return _WordlistCard(
-                              wordlist: wordlist,
-                              isConfirming:
-                                  _wordlistDeleteConfirmation == wordlist.id,
-                              onDelete: () {},
-                              onConfirmationToggle: () {
-                                setState(() {
-                                  if (_wordlistDeleteConfirmation ==
-                                      wordlist.id) {
-                                    _wordlistDeleteConfirmation = null;
-                                  } else {
-                                    _wordlistDeleteConfirmation = wordlist.id;
-                                    _showDeleteConfirmation = false;
-                                  }
-                                });
-                              },
-                              onCancelConfirmations: () {
-                                if (_showDeleteConfirmation ||
-                                    _wordlistDeleteConfirmation != null) {
-                                  setState(() {
-                                    _showDeleteConfirmation = false;
-                                    _wordlistDeleteConfirmation = null;
-                                  });
-                                }
-                              },
+                            return _buildWordlistCard(
+                              wordlist,
+                              customTypes.map((t) => t.name).toList(),
                             );
                           },
                         ),
@@ -222,6 +244,7 @@ class _WordlistsScreenState extends ConsumerState<WordlistsScreen> {
                       _wordlistDeleteConfirmation = null;
                     });
                   }
+                  _resetAllSwipes();
 
                   // Open file picker directly
                   final result = await FilePicker.platform.pickFiles(
@@ -427,157 +450,209 @@ class _WordlistsScreenState extends ConsumerState<WordlistsScreen> {
       ],
     );
   }
-}
 
-extension _WordlistsFabClearance on _WordlistsScreenState {
-  double _floatingNavClearance(BuildContext context) {
-    const double navHeight = 64.0;
-    final double navBottomMargin = GeistSpacing.lg * 2;
-    final double safeBottom = MediaQuery.of(context).padding.bottom;
-    final double extraSpacing = GeistSpacing.lg;
-    return safeBottom + navHeight + navBottomMargin + extraSpacing;
-  }
-}
+  Widget _buildWordlistCard(WordlistModel wordlist, List<String> customTypes) {
+    const builtInTypes = ['Default', 'Email', 'Credentials', 'Numeric', 'URLs'];
+    final dropdownItems = [...builtInTypes, ...customTypes];
+    final hasValue = dropdownItems.contains(wordlist.type);
 
-class _WordlistCard extends ConsumerWidget {
-  final WordlistModel wordlist;
-  final VoidCallback onDelete;
-  final bool isConfirming;
-  final VoidCallback onConfirmationToggle;
-  final VoidCallback onCancelConfirmations;
+    final controller = _getSwipeController(wordlist.id);
+    final animation = _swipeAnimations[wordlist.id]!;
 
-  const _WordlistCard({
-    required this.wordlist,
-    required this.onDelete,
-    required this.isConfirming,
-    required this.onConfirmationToggle,
-    required this.onCancelConfirmations,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       margin: EdgeInsets.only(bottom: GeistSpacing.md),
-      decoration: BoxDecoration(
-        color: GeistColors.white,
-        border: Border.all(color: GeistColors.gray200),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onCancelConfirmations,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: EdgeInsets.all(GeistSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header row
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          GeistText(
-                            wordlist.name,
-                            variant: GeistTextVariant.headingSmall,
-                          ),
-                          SizedBox(height: GeistSpacing.xs),
-                          GeistText(
-                            wordlist.path,
-                            variant: GeistTextVariant.bodyMedium,
-                            customColor: GeistColors.gray600,
-                          ),
-                        ],
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        if (isConfirming) {
-                          // Confirm deletion
-                          ref
-                              .read(wordlistsProvider.notifier)
-                              .deleteWordlist(wordlist.id);
-                          onConfirmationToggle();
-                          context.showSuccessToast(
-                            'Wordlist "${wordlist.name}" deleted',
-                          );
-                        } else {
-                          // Show confirmation
-                          onConfirmationToggle();
-                        }
-                      },
-                      child: Container(
-                        padding: EdgeInsets.all(4),
-                        child: Icon(
-                          isConfirming ? Icons.check : Icons.delete_outline,
-                          size: 20,
-                          color: isConfirming ? Colors.green : GeistColors.red,
-                        ),
-                      ),
-                    ),
-                  ],
+      child: Stack(
+        children: [
+          // Delete background
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              alignment: Alignment.centerRight,
+              padding: EdgeInsets.only(right: GeistSpacing.md),
+              child: GestureDetector(
+                onTap: () {
+                  ref
+                      .read(wordlistsProvider.notifier)
+                      .deleteWordlist(wordlist.id);
+                  if (mounted) {
+                    context.showSuccessToast(
+                      'Wordlist "${wordlist.name}" deleted',
+                    );
+                  }
+                },
+                child: Container(
+                  padding: EdgeInsets.all(GeistSpacing.sm),
+                  child: Icon(Icons.delete, color: Colors.white, size: 24),
                 ),
-
-                SizedBox(height: GeistSpacing.md),
-
-                // Type dropdown and metadata row
-                Row(
-                  children: [
-                    SizedBox(
-                      height: 32,
-                      child: GeistDropdown<String>(
-                        label: wordlist.type,
-                        value: wordlist.type,
-                        width: 125,
-                        items: const [
-                          'Default',
-                          'Email',
-                          'Credentials',
-                          'Numeric',
-                          'URLs',
-                        ],
-                        itemLabelBuilder: (String type) => type,
-                        onChanged: (value) {
-                          if (value != wordlist.type) {
-                            ref
-                                .read(wordlistsProvider.notifier)
-                                .updateWordlistType(wordlist.id, value);
-                          }
-                        },
-                      ),
-                    ),
-
-                    SizedBox(width: GeistSpacing.md),
-
-                    GeistText(
-                      '${wordlist.totalLines} lines',
-                      variant: GeistTextVariant.bodySmall,
-                      customColor: GeistColors.gray600,
-                    ),
-
-                    const Spacer(),
-
-                    if (wordlist.lastUsed != null)
-                      GeistText(
-                        'Used ${_formatDate(wordlist.lastUsed!)}',
-                        variant: GeistTextVariant.bodySmall,
-                        customColor: GeistColors.gray400,
-                      )
-                    else if (wordlist.createdAt != null)
-                      GeistText(
-                        _formatDate(wordlist.createdAt!),
-                        variant: GeistTextVariant.bodySmall,
-                        customColor: GeistColors.gray400,
-                      ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+          // Main content
+          AnimatedBuilder(
+            animation: animation,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(animation.value, 0),
+                child: GestureDetector(
+                  onHorizontalDragUpdate: (details) {
+                    final currentValue = controller.value;
+                    final delta = details.delta.dx / 300;
+
+                    // Allow left swipe to open and right swipe to close
+                    if (details.delta.dx < 0) {
+                      final newValue = (currentValue - delta).clamp(0.0, 1.0);
+                      controller.value = newValue;
+                    } else if (details.delta.dx > 0 && currentValue > 0) {
+                      final newValue = (currentValue - delta).clamp(0.0, 1.0);
+                      controller.value = newValue;
+                    }
+                  },
+                  onHorizontalDragEnd: (details) {
+                    // Consider both position and velocity for more natural feel
+                    final velocity = details.velocity.pixelsPerSecond.dx;
+
+                    if (velocity < -500) {
+                      controller.forward();
+                    } else if (velocity > 500) {
+                      controller.reverse();
+                    } else if (controller.value > 0.3) {
+                      controller.forward();
+                    } else {
+                      controller.reverse();
+                    }
+                  },
+                  onTap: () {
+                    // Cancel any active confirmations first
+                    if (_showDeleteConfirmation ||
+                        _wordlistDeleteConfirmation != null) {
+                      setState(() {
+                        _showDeleteConfirmation = false;
+                        _wordlistDeleteConfirmation = null;
+                      });
+                      return;
+                    }
+                    _resetSwipe(wordlist.id);
+                  },
+                  child: Container(
+                    padding: EdgeInsets.all(GeistSpacing.md),
+                    decoration: BoxDecoration(
+                      color: GeistColors.white,
+                      border: Border.all(color: GeistColors.gray200),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Stack(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Header row
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      GeistText(
+                                        wordlist.name,
+                                        variant: GeistTextVariant.headingSmall,
+                                      ),
+                                      SizedBox(height: GeistSpacing.xs),
+                                      GeistText(
+                                        wordlist.path,
+                                        variant: GeistTextVariant.bodyMedium,
+                                        customColor: GeistColors.gray600,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            SizedBox(height: GeistSpacing.md),
+
+                            // Type dropdown and metadata row
+                            Row(
+                              children: [
+                                SizedBox(
+                                  height: 32,
+                                  child: GeistDropdown<String>(
+                                    label: hasValue
+                                        ? wordlist.type
+                                        : 'Select type',
+                                    value: hasValue
+                                        ? wordlist.type
+                                        : (dropdownItems.isNotEmpty
+                                              ? dropdownItems.first
+                                              : ''),
+                                    width: 125,
+                                    items: dropdownItems,
+                                    itemLabelBuilder: (String type) =>
+                                        type.isEmpty ? 'Select type' : type,
+                                    onChanged: (value) {
+                                      if (value != wordlist.type) {
+                                        ref
+                                            .read(wordlistsProvider.notifier)
+                                            .updateWordlistType(
+                                              wordlist.id,
+                                              value,
+                                            );
+                                      }
+                                    },
+                                  ),
+                                ),
+
+                                SizedBox(width: GeistSpacing.md),
+
+                                GeistText(
+                                  '${wordlist.totalLines} lines',
+                                  variant: GeistTextVariant.bodySmall,
+                                  customColor: GeistColors.gray600,
+                                ),
+
+                                const Spacer(),
+
+                                if (wordlist.lastUsed != null)
+                                  GeistText(
+                                    'Used ${_formatDate(wordlist.lastUsed!)}',
+                                    variant: GeistTextVariant.bodySmall,
+                                    customColor: GeistColors.gray400,
+                                  )
+                                else if (wordlist.createdAt != null)
+                                  GeistText(
+                                    _formatDate(wordlist.createdAt!),
+                                    variant: GeistTextVariant.bodySmall,
+                                    customColor: GeistColors.gray400,
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Tooltip(
+                            message: 'Swipe left to delete this wordlist',
+                            preferBelow: false,
+                            triggerMode: TooltipTriggerMode.tap,
+                            child: Icon(
+                              Icons.info_outline,
+                              size: 18,
+                              color: GeistColors.gray400,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -597,5 +672,15 @@ class _WordlistCard extends ConsumerWidget {
     } else {
       return 'Just now';
     }
+  }
+}
+
+extension _WordlistsFabClearance on _WordlistsScreenState {
+  double _floatingNavClearance(BuildContext context) {
+    const double navHeight = 64.0;
+    final double navBottomMargin = GeistSpacing.lg * 2;
+    final double safeBottom = MediaQuery.of(context).padding.bottom;
+    final double extraSpacing = GeistSpacing.lg;
+    return safeBottom + navHeight + navBottomMargin + extraSpacing;
   }
 }

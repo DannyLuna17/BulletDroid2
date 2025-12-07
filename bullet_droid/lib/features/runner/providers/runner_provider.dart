@@ -393,7 +393,9 @@ class MultiRunnerNotifier extends StateNotifier<Map<String, RunnerInstance>> {
             totalData: totalData,
             selectedWordlistId: runnerInstance.selectedWordlistId,
           );
-    } catch (e) {}
+    } catch (e) {
+      // Ignore error
+    }
   }
 
   String _resolveDashboardConfigName(String? configId) {
@@ -1015,7 +1017,9 @@ class MultiRunnerNotifier extends StateNotifier<Map<String, RunnerInstance>> {
         _processedHits.remove(progress.jobId);
       }
       await _syncForegroundService();
-    } catch (e) {}
+    } catch (e) {
+      // Ignore error
+    }
   }
 
   // Clean up inactive runners
@@ -1060,7 +1064,9 @@ class MultiRunnerNotifier extends StateNotifier<Map<String, RunnerInstance>> {
       );
 
       await _syncForegroundService();
-    } catch (e) {}
+    } catch (e) {
+      // Ignore error
+    }
   }
 
   int _computeProcessedForDashboard(String runnerId, JobProgress progress) {
@@ -1140,7 +1146,9 @@ class MultiRunnerNotifier extends StateNotifier<Map<String, RunnerInstance>> {
         default:
           ToastService.showInfo(message, duration: duration);
       }
-    } catch (e) {}
+    } catch (e) {
+      // Ignore error
+    }
   }
 
   /// Helper method to clear previous job tracking data for clean slate
@@ -1172,7 +1180,9 @@ class MultiRunnerNotifier extends StateNotifier<Map<String, RunnerInstance>> {
       }
 
       if (keysToRemove.isNotEmpty) {}
-    } catch (e) {}
+    } catch (e) {
+      // Ignore error
+    }
   }
 
   @override

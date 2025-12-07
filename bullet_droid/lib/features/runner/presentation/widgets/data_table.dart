@@ -242,7 +242,7 @@ class _RunnerDataTableState extends ConsumerState<RunnerDataTable> {
     );
   }
 
-  List<dynamic> _getCurrentTabData(runnerInstance, JobProgress? jobProgress) {
+  List<dynamic> _getCurrentTabData(dynamic runnerInstance, JobProgress? jobProgress) {
     final selectedTab = widget.tabController.index;
     switch (selectedTab) {
       case 0:
