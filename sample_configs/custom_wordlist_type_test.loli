@@ -1,0 +1,20 @@
+[SETTINGS]
+{
+  "Name": "Custom Wordlist Type Test",
+  "Author": "LunaLib",
+  "Version": "1.0.0",
+  "SuggestedBots": 1,
+  "NeedsProxies": false,
+  "AllowedWordlist1": "TestWordlistType",
+  "AllowedWordlist2": "",
+  "AdditionalInfo": "Validates custom wordlist type parsing (regex + slices). Uses slices i1, i2, i3, i4 injected into variables."
+}
+
+[SCRIPT]
+FUNCTION Constant "<i1>|<i2>|<i3>|<i4>" -> VAR "FULL" 
+
+KEYCHECK
+  KEYCHAIN Success OR
+    KEY "<FULL>" Contains "|"
+
+PARSE "<FULL>" REGEX "(.*)" -> CAP "FULL_ECHO"

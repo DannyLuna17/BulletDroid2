@@ -1,0 +1,5 @@
+Name=TestWordlistType
+Regex=(.*?)|(.*?)|(.*?)|(.*?)
+Verify=True
+Separator=|
+Slices=i1,i2,i3,i4

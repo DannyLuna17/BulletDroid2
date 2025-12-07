@@ -420,7 +420,9 @@ class ParseBlock extends BlockInstance {
             return;
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        // Ignore error
+      }
     }
 
     if (remaining.contains('":"" """')) {
@@ -475,7 +477,9 @@ class ParseBlock extends BlockInstance {
     try {
       jsonPath = LineParser.parseLiteral(remaining);
       remaining = LineParser.consumeLiteral(remaining);
-    } catch (e) {}
+    } catch (e) {
+      // Ignore error
+    }
 
     _parseCommonParameters(remaining);
   }
@@ -487,12 +491,16 @@ class ParseBlock extends BlockInstance {
     try {
       regex = LineParser.parseLiteral(remaining);
       remaining = LineParser.consumeLiteral(remaining);
-    } catch (e) {}
+    } catch (e) {
+      // Ignore error
+    }
 
     try {
       LineParser.parseLiteral(remaining);
       remaining = LineParser.consumeLiteral(remaining);
-    } catch (e) {}
+    } catch (e) {
+      // Ignore error
+    }
 
     _parseCommonParameters(remaining);
   }
@@ -504,13 +512,17 @@ class ParseBlock extends BlockInstance {
     try {
       cssSelector = LineParser.parseLiteral(remaining);
       remaining = LineParser.consumeLiteral(remaining);
-    } catch (e) {}
+    } catch (e) {
+      // Ignore error
+    }
 
     // Extract CSS attribute using LineParser
     try {
       cssAttribute = LineParser.parseLiteral(remaining);
       remaining = LineParser.consumeLiteral(remaining);
-    } catch (e) {}
+    } catch (e) {
+      // Ignore error
+    }
 
     _parseCommonParameters(remaining);
   }
@@ -585,7 +597,9 @@ class ParseBlock extends BlockInstance {
           } catch (e) {
             // No prefix/suffix
           }
-        } catch (e) {}
+        } catch (e) {
+          // Ignore error
+        }
       }
     }
   }

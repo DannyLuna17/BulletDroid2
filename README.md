@@ -220,7 +220,7 @@ BulletDroid and LunaLib are provided for educational and research purposes. Use 
 
 ## Acknowledgements
 
-Five years ago, the existence of this software was just a dream for me. Today, with the knowledge I’ve gained, it has become possible. I hope the community enjoys it. :)
+Five years ago, the existence of this software was just a dream. It has become possible. I hope the community enjoys it. :)
 
 • Inspired by [OpenBullet](https://github.com/openbullet/openbullet)  
 • Fonts: [Geist](https://github.com/vercel/geist-font)

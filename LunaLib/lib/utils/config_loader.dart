@@ -28,10 +28,11 @@ class ConfigLoader {
   /// Load a single .loli file from the given path
   static Future<Config> loadFromFile(String filePath) async {
     // Validate file extension
-    if (!filePath.toLowerCase().endsWith('.loli')) {
-      throw FormatException(
-          'Invalid file extension. Expected .loli file: $filePath');
-    }
+    // Disable file extension validation for now, testing .svb files
+    // if (!filePath.toLowerCase().endsWith('.loli')) {
+    //   throw FormatException(
+    //       'Invalid file extension. Expected .loli file: $filePath');
+    // }
 
     // Check if file exists
     if (!await fileSystemService.exists(filePath)) {

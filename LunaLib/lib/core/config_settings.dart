@@ -65,7 +65,9 @@ class ConfigSettings {
     if (json['LastModified'] != null) {
       try {
         settings.lastModified = DateTime.parse(json['LastModified']);
-      } catch (e) {}
+      } catch (e) {
+        // Ignore error
+      }
     }
 
     if (json['RequiredPlugins'] != null) {
