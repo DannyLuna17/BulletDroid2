@@ -5,6 +5,7 @@
 </p>
 
 <p align="center">
+  <a href="https://www.codefactor.io/repository/github/dannyluna17/bulletdroid2"><img src="https://www.codefactor.io/repository/github/dannyluna17/bulletdroid2/badge" alt="CodeFactor" /></a>
   <img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/ci-badge.svg" alt="CI Status" height="22" />
   <a href="LICENSE"><img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/license-badge.svg" alt="License: MIT" height="22" /></a>
   <!-- <img src="https://github.com/DannyLuna17/BulletDroid2/raw/image-data/locBadge.svg" alt="LOC badge" height="22" /> -->
@@ -36,7 +37,6 @@ Typical use cases span large‑scale data collection and extraction, robust resp
 
 [Download BulletDroid (Android APK and iOS IPA)](https://github.com/DannyLuna17/BulletDroid2/releases)
 
-
 ## Usage
 
 1. **Import Config** (.loli)
@@ -47,10 +47,10 @@ Typical use cases span large‑scale data collection and extraction, robust resp
 
 ## Key Features
 
-• Multi-threaded Runner UI backed by an isolate pool     
-• Live CPM, per-bot status, and crash-safe job recovery      
-• Config management and editing   
-• CustomInputs support   
+• Multi-threaded Runner UI backed by an isolate pool  
+• Live CPM, per-bot status, and crash-safe job recovery  
+• Config management and editing  
+• CustomInputs support  
 • Hits DB with search, filters, and export  
 • Wordlist management with type selection  
 • Proxy testing with concurrency control and periodic persistence  
