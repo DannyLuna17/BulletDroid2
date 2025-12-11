@@ -211,8 +211,7 @@ class RunnerControls extends ConsumerWidget {
                               }
                               if (cfg != null) {
                                 final allowed = _allowedWordlistTypes(cfg.metadata);
-                                if (allowed.isNotEmpty &&
-                                    !allowed.contains(wl.type)) {
+                                if (!_isWordlistTypeAllowed(wl.type, allowed)) {
                                   context.showErrorToast(
                                     'Wordlist type "${wl.type}" not allowed. Allowed: ${allowed.join(", ")}',
                                   );
@@ -285,5 +284,26 @@ class RunnerControls extends ConsumerWidget {
     final w1 = metadata['AllowedWordlist1']?.toString().trim() ?? '';
     final w2 = metadata['AllowedWordlist2']?.toString().trim() ?? '';
     return [w1, w2].where((w) => w.isNotEmpty).toList();
+  }
+
+  bool _isWordlistTypeAllowed(String wordlistType, List<String> allowedTypes) {
+    if (allowedTypes.isEmpty) return true;
+    if (allowedTypes.contains(wordlistType)) return true;
+    
+    // Handle types that contain "/" (e.g., "MailPass/Credentials")
+    final typeParts = wordlistType.split('/').map((t) => t.trim()).toList();
+    
+    // Check if any part of the wordlist type matches allowed types
+    for (final part in typeParts) {
+      if (allowedTypes.contains(part)) return true;
+    }
+    
+    // Treat "Credentials" and "MailPass" as equivalent
+    const equivalentTypes = {'Credentials', 'MailPass'};
+    final hasEquivalentType = typeParts.any((t) => equivalentTypes.contains(t));
+    if (hasEquivalentType) {
+      return allowedTypes.any((t) => equivalentTypes.contains(t));
+    }
+    return false;
   }
 }

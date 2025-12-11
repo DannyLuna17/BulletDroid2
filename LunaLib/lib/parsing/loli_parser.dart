@@ -418,7 +418,15 @@ class LoliParser {
   }
 
   static String? _identifyBlockType(String line) {
-    final trimmed = line.trim().toUpperCase();
+    var trimmed = line.trim().toUpperCase();
+
+    // Handle label prefix (e.g., "#GET REQUEST GET" or "#Label REQUEST")
+    if (trimmed.startsWith('#')) {
+      final labelEnd = trimmed.indexOf(' ');
+      if (labelEnd != -1) {
+        trimmed = trimmed.substring(labelEnd + 1).trimLeft();
+      }
+    }
 
     if (trimmed.startsWith('FUNCTION ')) {
       return 'Function';

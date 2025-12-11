@@ -113,6 +113,10 @@ class RequestBlock extends BlockInstance {
           client.autoUncompress = true;
           client.userAgent = AppConfiguration.defaultUserAgent;
 
+          // Bypass SSL certificate verification
+          client.badCertificateCallback =
+              (X509Certificate cert, String host, int port) => true;
+
           // Configure proxy if needed
           if (data.useProxy && data.proxy != null) {
             client.findProxy = (uri) {
@@ -457,6 +461,12 @@ class RequestBlock extends BlockInstance {
         InterpolationEngine.interpolate(authPass, data.variables, data);
     final authString = base64.encode(utf8.encode('$username:$password'));
     headers['Authorization'] = 'Basic $authString';
+
+    // Log BASICAUTH credentials info
+    // data.log('REQUEST: BASICAUTH credentials:');
+    // data.log('REQUEST:   Username: $username');
+    // data.log('REQUEST:   Password: $password');
+    // data.log('REQUEST:   Authorization header: Basic $authString');
 
     final options = Options(
       headers: headers,
@@ -822,8 +832,17 @@ class RequestBlock extends BlockInstance {
     bool foundRequestLine = false;
 
     for (var i = 0; i < lines.length; i++) {
-      final line = lines[i].trim();
+      var line = lines[i].trim();
       if (line.isEmpty) continue;
+
+      // Handle label prefix (e.g., "#GET REQUEST GET" or "#Label REQUEST")
+      if (line.startsWith('#') && line.contains(' REQUEST ')) {
+        final labelEnd = line.indexOf(' ');
+        if (labelEnd != -1) {
+          label = line.substring(1, labelEnd);
+          line = line.substring(labelEnd + 1).trimLeft();
+        }
+      }
 
       // Parse the REQUEST line
       if (!foundRequestLine && line.startsWith('REQUEST ')) {
@@ -854,9 +873,24 @@ class RequestBlock extends BlockInstance {
       } else if (line.startsWith('CONTENTTYPE ')) {
         contentType = _extractQuotedValue(line.substring(12));
       } else if (line.startsWith('USERNAME ')) {
-        authUser = _extractQuotedValue(line.substring(9));
+        // Handle case where USERNAME and PASSWORD are on the same line
+        final userPassLine = line.substring(9);
+        final userMatch = RegExp(r'"([^"]*)"').firstMatch(userPassLine);
+        if (userMatch != null) {
+          authUser = userMatch.group(1)!;
+        }
+        final passMatch = RegExp(r'PASSWORD\s+"([^"]*)"', caseSensitive: false)
+            .firstMatch(userPassLine);
+        if (passMatch != null) {
+          authPass = passMatch.group(1)!;
+        }
       } else if (line.startsWith('PASSWORD ')) {
-        authPass = _extractQuotedValue(line.substring(9));
+        final passMatch = RegExp(r'"([^"]*)"').firstMatch(line.substring(9));
+        if (passMatch != null) {
+          authPass = passMatch.group(1)!;
+        } else {
+          authPass = _extractQuotedValue(line.substring(9));
+        }
       } else if (line.startsWith('BOUNDARY ')) {
         multipartBoundary = _extractQuotedValue(line.substring(9));
       } else if (line.startsWith('STRINGCONTENT ')) {
@@ -885,12 +919,44 @@ class RequestBlock extends BlockInstance {
       // Parse optional flags
       final flagsPart = match.group(3)!.trim();
       if (flagsPart.isNotEmpty) {
-        if (flagsPart.contains('AcceptEncoding=False')) acceptEncoding = false;
-        if (flagsPart.contains('AutoRedirect=False')) autoRedirect = false;
-        if (flagsPart.contains('ReadResponseSource=False'))
+        final upperFlags = flagsPart.toUpperCase();
+        if (upperFlags.contains('ACCEPTENCODING=FALSE')) acceptEncoding = false;
+        if (upperFlags.contains('AUTOREDIRECT=FALSE')) autoRedirect = false;
+        if (upperFlags.contains('READRESPONSESOURCE=FALSE')) {
           readResponseSource = false;
-        if (flagsPart.contains('ParseQuery=True')) parseQuery = true;
-        if (flagsPart.contains('EncodeContent=True')) encodeContent = true;
+        }
+        if (upperFlags.contains('PARSEQUERY=TRUE')) parseQuery = true;
+        if (upperFlags.contains('ENCODECONTENT=TRUE')) encodeContent = true;
+
+        // Handle BasicAuth request type
+        if (upperFlags.contains('BASICAUTH')) {
+          requestType = 'BASICAUTH';
+
+          // Parse inline USERNAME and PASSWORD
+          final userMatch =
+              RegExp(r'USERNAME\s+"([^"]*)"', caseSensitive: false)
+                  .firstMatch(flagsPart);
+          if (userMatch != null) {
+            authUser = userMatch.group(1)!;
+          }
+
+          final passMatch =
+              RegExp(r'PASSWORD\s+"([^"]*)"', caseSensitive: false)
+                  .firstMatch(flagsPart);
+          if (passMatch != null) {
+            authPass = passMatch.group(1)!;
+          }
+        }
+
+        // Handle Multipart request type
+        if (upperFlags.contains('MULTIPART')) {
+          requestType = 'MULTIPART';
+        }
+
+        // Handle Raw request type
+        if (upperFlags.contains(' RAW') || upperFlags.startsWith('RAW')) {
+          requestType = 'RAW';
+        }
       }
     }
   }

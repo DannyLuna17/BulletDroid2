@@ -25,6 +25,7 @@ class BotData {
   String? customStatus;
   List<LogEntry> logs;
   ConfigSettings? configSettings;
+  bool proxyBanned = false;
 
   BotData({
     required this.input,

@@ -467,7 +467,7 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen>
 
       // Validate wordlist type against config requirement
       final allowedTypes = _allowedWordlistTypes(config.metadata);
-      if (allowedTypes.isNotEmpty && !allowedTypes.contains(wordlist.type)) {
+      if (!_isWordlistTypeAllowed(wordlist.type, allowedTypes)) {
         context.showErrorToast(
           'Selected wordlist type "${wordlist.type}" is not allowed for this config. Allowed: ${allowedTypes.join(", ")}',
         );
@@ -572,6 +572,27 @@ class _RunnerScreenState extends ConsumerState<RunnerScreen>
     final w1 = metadata['AllowedWordlist1']?.toString().trim() ?? '';
     final w2 = metadata['AllowedWordlist2']?.toString().trim() ?? '';
     return [w1, w2].where((w) => w.isNotEmpty).toList();
+  }
+
+  bool _isWordlistTypeAllowed(String wordlistType, List<String> allowedTypes) {
+    if (allowedTypes.isEmpty) return true;
+    if (allowedTypes.contains(wordlistType)) return true;
+    
+    // Handle types that contain "/" (e.g., "MailPass/Credentials")
+    final typeParts = wordlistType.split('/').map((t) => t.trim()).toList();
+    
+    // Check if any part of the wordlist type matches allowed types
+    for (final part in typeParts) {
+      if (allowedTypes.contains(part)) return true;
+    }
+    
+    // Treat "Credentials" and "MailPass" as equivalent
+    const equivalentTypes = {'Credentials', 'MailPass'};
+    final hasEquivalentType = typeParts.any((t) => equivalentTypes.contains(t));
+    if (hasEquivalentType) {
+      return allowedTypes.any((t) => equivalentTypes.contains(t));
+    }
+    return false;
   }
 
   List<String> _parseCustomWordlistLines(

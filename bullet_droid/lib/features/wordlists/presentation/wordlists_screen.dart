@@ -452,7 +452,7 @@ class _WordlistsScreenState extends ConsumerState<WordlistsScreen>
   }
 
   Widget _buildWordlistCard(WordlistModel wordlist, List<String> customTypes) {
-    const builtInTypes = ['Default', 'Email', 'Credentials', 'Numeric', 'URLs'];
+    const builtInTypes = ['Default', 'Email', 'MailPass/Credentials', 'Numeric', 'URLs'];
     final dropdownItems = [...builtInTypes, ...customTypes];
     final hasValue = dropdownItems.contains(wordlist.type);
 

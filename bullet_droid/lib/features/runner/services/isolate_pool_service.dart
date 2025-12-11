@@ -480,6 +480,9 @@ class IsolateWorker {
     final receivePort = ReceivePort();
     sendPort.send(receivePort.sendPort);
 
+    // Debug mode for detailed logging
+    // lunalib.AppConfiguration.debugMode = true;
+
     JobRunner? currentRunner;
 
     await for (final message in receivePort) {
@@ -1018,7 +1021,10 @@ class JobRunner {
     String? usedProxyString;
 
     try {
+      // final botData = lunalib.BotData(input: effectiveInput, debugMode: true);
       final botData = lunalib.BotData(input: effectiveInput);
+      botData.configSettings = config.settings;
+      
       if (sliceVariables != null) {
         for (final entry in sliceVariables.entries) {
           botData.variables.set(
@@ -1122,32 +1128,36 @@ class JobRunner {
       if (usedProxyString != null) {
         ProxyState? proxyState;
 
-        switch (result.status) {
-          case lunalib.BotStatus.SUCCESS:
-            proxyState = ProxyState.good;
-            break;
-          case lunalib.BotStatus.CUSTOM:
-            proxyState = ProxyState.good;
-            break;
-          case lunalib.BotStatus.FAIL:
-            // If failed, we consider it as good because it means the proxy is working but the data is not valid
-            proxyState = ProxyState.good;
-            break;
-          case lunalib.BotStatus.BAN:
-            proxyState = ProxyState.banned;
-            break;
-          case lunalib.BotStatus.RETRY:
-          case lunalib.BotStatus.ERROR:
-            // Treat ERROR (exceptions) as bad proxy if proxy was used
-            proxyState = ProxyState.bad;
-            _handleProxyFailure(usedProxyString);
-            break;
-          case lunalib.BotStatus.TOCHECK:
-            proxyState = ProxyState.good;
-            break;
-          case lunalib.BotStatus.NONE:
-          case lunalib.BotStatus.UNKNOWN:
-            proxyState = ProxyState.untested;
+        // Check if proxy should be banned (set by keycheck with banOnToCheck)
+        if (result.proxyBanned) {
+          proxyState = ProxyState.banned;
+        } else {
+          switch (result.status) {
+            case lunalib.BotStatus.SUCCESS:
+              proxyState = ProxyState.good;
+              break;
+            case lunalib.BotStatus.CUSTOM:
+              proxyState = ProxyState.good;
+              break;
+            case lunalib.BotStatus.FAIL:
+              proxyState = ProxyState.good;
+              break;
+            case lunalib.BotStatus.BAN:
+              proxyState = ProxyState.banned;
+              break;
+            case lunalib.BotStatus.RETRY:
+            case lunalib.BotStatus.ERROR:
+              // Treat ERROR (exceptions) as bad proxy if proxy was used
+              proxyState = ProxyState.bad;
+              _handleProxyFailure(usedProxyString);
+              break;
+            case lunalib.BotStatus.TOCHECK:
+              proxyState = ProxyState.good;
+              break;
+            case lunalib.BotStatus.NONE:
+            case lunalib.BotStatus.UNKNOWN:
+              proxyState = ProxyState.untested;
+          }
         }
 
         _updateProxyStatus(usedProxyString, proxyState);
