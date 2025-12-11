@@ -41,9 +41,9 @@ Typical use cases span large‑scale data collection and extraction, robust resp
 
 1. **Import Config** (.loli)
 2. **Import Wordlist** (.txt)
-3. **Start Runner** → select config/wordlist, set threads/proxies.
-4. **Monitor Execution** → live CPM and per-bot status.
-5. **Review Results** → Hits DB view with filters and TXT export.
+3. **Start Runner** -> select config/wordlist, set threads/proxies.
+4. **Monitor Execution** -> live CPM and per-bot status.
+5. **Review Results** -> Hits DB view with filters and TXT export.
 
 ## Key Features
 
@@ -92,7 +92,7 @@ BulletDroid/
 
 ### 1. Prerequisites
 
-• Flutter stable with Dart ≥ 3.8 (`flutter --version`)  
+• Flutter stable with Dart >= 3.8 (`flutter --version`)  
 • Platform SDKs
 
 ### 2. Clone and Install Dependencies
